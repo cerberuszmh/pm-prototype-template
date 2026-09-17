@@ -1,0 +1,66 @@
+---
+description: 文件编辑安全规范：防止 PowerShell 编码破坏含中文的 UTF-8 文件
+globs: src/**/*.vue,src/**/*.js,src/**/*.ts,src/**/*.json
+alwaysApply: true
+---
+
+# 文件编辑安全规范
+
+## 核心原则
+
+**对项目中任何含中文的文件（.vue / .js / .ts / .json / .md），一律使用专用工具操作，禁止通过 Shell 读写文件内容。**
+
+项目所有文件为 UTF-8 无 BOM 编码。PowerShell 在中文 Windows 系统上默认使用 GBK（OEM CP936），两种编码对多字节汉字的字节边界理解不同，执行 `Get-Content` / `Set-Content` 时会将汉字末字节截断并替换为 `？`，导致：
+
+- JS 字符串未闭合 → Babel 解析报错
+- HTML 属性未闭合 → Vue 模板编译报错
+- 注释内容错乱 → 注释标签未闭合导致后续元素解析失败
+
+## 规则 1：代码文件编辑只用专用工具
+
+| 操作类型 | 使用工具 | 禁止使用 |
+|----------|----------|----------|
+| 修改已有文件中的某段内容 | StrReplace 工具 | Shell + Set-Content |
+| 创建新文件 | Write 工具 | Shell + echo / Out-File |
+| 读取文件内容 | Read 工具 | Shell + Get-Content |
+| 在文件中查找字符串 | Grep 工具 | Shell + Select-String |
+| 查找文件 | Glob 工具 | Shell + Get-ChildItem |
+
+## 规则 2：Shell 仅用于系统命令
+
+Shell 工具只用于以下场景，不用于读写文件内容：
+
+- 包管理：`npm install`、`npm run dev`
+- 进程管理：启动/停止服务
+- Git 操作：`git status`、`git log`
+- 目录操作：`mkdir`、`ls`（不含 cat/echo 写文件）
+
+## 规则 3：必须用 Shell 写文件时的安全写法
+
+如有特殊情况不得不在 Shell 中处理文件，必须显式指定 UTF-8 编码：
+
+```powershell
+# ✅ 正确：显式 UTF-8 读取
+$content = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8)
+
+# ✅ 正确：显式 UTF-8 写入（无 BOM）
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($file, $content, $utf8NoBom)
+
+# ❌ 禁止：默认编码读取（GBK）
+Get-Content $file
+
+# ❌ 禁止：默认编码写入（GBK）
+Set-Content $file $content
+$content | Out-File $file
+```
+
+## 规则 4：修改后必须验证
+
+每次通过任何方式修改文件后，立即用 **Read 工具** 抽取修改区域 3–5 行进行目视验证：
+
+- 确认无 `？`、`ï¿½`、`æ`、`å` 等乱码字符
+- 确认字符串引号成对闭合
+- 确认 HTML 标签完整
+
+发现乱码立即停止操作，不叠加更多写入，先用 Read 工具确定损坏范围再逐行修复。
