@@ -36,6 +36,7 @@ description: 负责本项目建设文档的生成、更新与版本升级路由�
 4. 升版时只升有实质性内容变更的文档；无改动不升版。
 5. 不确定信息统一标注"待确认"，不擅自编造业务事实；未经用户要求不默认顺带生成整套文档。
 6. A01～A03 项目验收文档不属于本 SKILL 的新生成、补充更新或版本升级范围。
+7. 双速轨模块尚未通过方向确认闸门时，不得生成该模块正式 PRD/SRS——先生成或维护轻量需求摘要，并引导回 `项目与模块启动` SKILL §2.8 完成方向确认。方向确认后的正式轨 PRD/SRS 生成属「反向定稿」：以已确认草稿与摘要 PM 决策为输入，禁止把草稿未批字段写成既定需求。
 
 ---
 
@@ -61,6 +62,7 @@ description: 负责本项目建设文档的生成、更新与版本升级路由�
 
 | 文档类型 | 模板 | 权威源（生成约束详见此处） |
 |---|---|---|
+| 轻量需求摘要（双速轨工作件，**非交付物**） | `templates/requirements/lightweight-summary-template.md` | `项目与模块启动` SKILL §2.8（双速轨快速轨 DT-F1；「PM 决策」列仅由 PM 确认后回写） |
 | 结构化需求底稿（**已废弃，仅维护老模块既有文件**） | `templates/requirements/structured-requirements-template.md` | 禁止为新模块生成；现行模块走 `项目与模块启动` SKILL §2.4 二件套 |
 | 项目对齐稿（**已合并入项目级 PRD，仅维护历史文件**） | `templates/requirements/project-alignment-template.md` | 禁止为新项目生成；现行对齐决策写入 P07 §9~§12 |
 | PRD（模块级二件套核心入口） | `templates/requirements/module-prd-template.md` | `doc-format.mdc §"PRD / SRS 分工边界"` + `项目与模块启动` SKILL §2.4（新模块 PRD 必须含 §需求背景 + §待确认清单） |
