@@ -27,6 +27,7 @@
 | 最近更新日期 |  |
 | 对应项目级 PRD | `docs/formal-requirements/P07-{系统名}产品需求文档（PRD）.md` |
 | 对应 SRS | `docs/formal-requirements/M{n}-03-{模块名}模块软件需求规格说明书（SRS）.md` |
+| 需求来源（可选） | 文档先行 / 双速轨反向定稿（后者注明依据的轻量摘要路径，如 `docs/working/M{n}-00-{模块名}模块轻量需求摘要.md`） |
 
 ## 2. 版本记录
 

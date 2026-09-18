@@ -4,7 +4,7 @@
 
 ## 分类
 
-- `templates/requirements/`：P07 合并版 PRD、模块 PRD、SRS、需求变更说明、翻新决策；结构化需求底稿和独立项目对齐稿仅为历史兼容模板
+- `templates/requirements/`：P07 合并版 PRD、模块 PRD、SRS、需求变更说明、翻新决策、轻量需求摘要（双速轨工作件，非交付物）；结构化需求底稿和独立项目对齐稿仅为历史兼容模板
 - `templates/design/`：业务流程说明、流程图类模板
 - `templates/review/`：评审清单、原型评审结论与阶段决策模板
 - `templates/testing/`：测试用例模板
