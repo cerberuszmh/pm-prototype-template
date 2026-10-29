@@ -3,6 +3,7 @@ import { h, onMounted, onUnmounted, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { message, notification } from "ant-design-vue";
 import companyLogo from "../assets/company-logo.png";
+import { appConfig } from "../config/app";
 import {
   LockOutlined,
   SafetyCertificateOutlined,
@@ -11,6 +12,12 @@ import {
 } from "@ant-design/icons-vue";
 
 const router = useRouter();
+
+// 品牌文案统一来自品牌配置，新项目只需修改 src/config/app.js
+const systemName = appConfig.systemName;
+const companyName = appConfig.companyName;
+// 登录卡副标题与登录成功通知共用同一句欢迎语，避免两处文案漂移
+const loginWelcome = `欢迎进入${systemName}`;
 
 // 模板验证码固定展示，但不参与登录校验，方便评审用户直接进入系统
 // 接入真实项目后，应由后端验证码接口和校验规则替换当前演示逻辑
@@ -39,7 +46,7 @@ function handleLogin() {
 function openWelcomeNotification() {
   notification.open({
     message: "欢迎登录",
-    description: "欢迎进入示例管理系统",
+    description: loginWelcome,
     icon: () =>
       h(SmileOutlined, {
         style: "color: #108ee9",
@@ -69,7 +76,7 @@ onUnmounted(() => {
   <main class="template-login">
     <!-- 2026-07-22 修订：删除 Logo，品牌区只展示示例系统名称 -->
     <header class="template-login__brand">
-      <span>示例管理系统</span>
+      <span>{{ systemName }}</span>
     </header>
 
     <section class="template-login__content">
@@ -79,7 +86,7 @@ onUnmounted(() => {
         <div class="template-login__card-heading">
           <div>
             <h1>登录</h1>
-            <p>欢迎进入示例管理系统</p>
+            <p>{{ loginWelcome }}</p>
           </div>
         </div>
 
@@ -142,7 +149,7 @@ onUnmounted(() => {
     <!-- 企业标识独立放在视口底部，避免改变登录卡片的既有位置 -->
     <footer class="template-login__company">
       <img :src="companyLogo" alt="" />
-      <span>辽宁鸣亿科技有限公司</span>
+      <span>{{ companyName }}</span>
     </footer>
   </main>
 </template>

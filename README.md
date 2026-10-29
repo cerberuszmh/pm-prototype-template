@@ -40,6 +40,7 @@ PM 初始化项目模板/
 ├── .cursor/
 │   ├── rules/          ← AI 治理规则（自动生效）
 │   └── skills/         ← 工作流 Skills（按需触发）
+├── .agents/skills/     ← Kimi Code 项目级技能目录（.cursor/skills 的副本；不使用 Kimi Code 可整目录删除）
 ├── docs/
 │   ├── user-requirements/    ← 用户原始需求材料、待确认问题清单
 │   ├── formal-requirements/  ← P07、模块 PRD/SRS、变更及历史兼容文档
@@ -52,6 +53,7 @@ PM 初始化项目模板/
 ├── prompts/            ← 输入模板（通用）
 ├── scripts/            ← 死引用检查等辅助脚本
 ├── src/
+│   ├── config/         ← 品牌与名称集中配置（app.js，前端唯一占位入口）
 │   ├── layouts/        ← 整体布局（WorkspaceLayout / PageTabs）
 │   ├── views/          ← 各模块页面（按需在子目录中创建；_draft/ 子目录为双速轨草稿区，未晋升不得进交接）
 │   ├── mock/           ← 模块 Mock 与共享枚举
@@ -78,6 +80,7 @@ PM 初始化项目模板/
 
 ## 模板状态说明
 
+- 系统名称、首页文案、登录页公司名等品牌占位统一收敛在 `src/config/app.js`，新项目只改这一个文件即可完成前端主要品牌替换；浏览器标签页标题由 `src/main.js` 按该配置设置。
 - 路由表（`src/router/index.js`）与侧边栏菜单（`src/layouts/WorkspaceLayout.vue`）只保留**系统首页 + 1 个「示例模块」分组**，作为新增页面时的参照样板。
 - `docs/` 的业务交付目录仅留 `.gitkeep`；`docs/samples/` 保留一套虚构脱敏成品，用于对照 P07、模块 PRD/SRS 与两阶段评审的填写深度。
 - `package.json` 中 `name` 为 `pm-prototype-template`、`version` 为 `0.0.1`，新项目启动时按需替换。

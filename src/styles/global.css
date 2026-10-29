@@ -41,6 +41,36 @@ html.login-page-open body #app::-webkit-scrollbar {
   display: none; /* Chrome / Safari */
 }
 
+/* V0.x 修订：全局细滚动条，替代浏览器默认粗滚动条；常显淡色保留「可滚动」提示，悬停加深 - RB-022 */
+/* 侧边栏、登录页的隐藏规则选择器更具体，仍保持隐藏 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Firefox 不支持 ::-webkit-scrollbar，只能用标准属性兜底；
+   不可对 Chromium 设置 scrollbar-width / scrollbar-color，否则新版 Chrome 会忽略上方 6px 定制 */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+}
+
 .workspace-layout {
   position: fixed;
   inset: 0;
@@ -243,6 +273,7 @@ html.login-page-open body #app::-webkit-scrollbar {
   min-height: 0;
   overflow-y: auto;
   /* 与 .page-stack gap 共用同一 token，保证「面包屑 → 首块」与「块与块」间距一致 */
+  /* V0.x 修订：右下角按钮组可拖动避让，内容区底部不再为其预留留白 - RB-023 */
   padding: var(--page-section-gap) 20px;
 }
 
@@ -376,6 +407,19 @@ html.login-page-open body #app::-webkit-scrollbar {
   background: #f5f7fa;
 }
 
+/* ── 弹窗让出 AI 面板区域 ─────────────────────────────────── */
+/* AI 面板打开时，弹窗、二次确认框、抽屉、图片预览的遮罩与容器右缩一个面板宽度，
+   弹窗在剩余区域内居中，既不钻到面板下方，遮罩也不盖住面板 - RB-021 */
+/* --ai-panel-offset 由 useAiAssistant.js 写入根节点，面板关闭或窄屏时为 0px */
+/* 前缀 body 用于提高权重：Ant 样式运行时注入、顺序在本文件之后，同权重下会覆盖本规则 */
+body .ant-modal-root .ant-modal-mask,
+body .ant-modal-root .ant-modal-wrap,
+body .ant-drawer:not(.ant-drawer-inline),
+body .ant-image-preview-root .ant-image-preview-mask,
+body .ant-image-preview-root .ant-image-preview-wrap {
+  right: var(--ai-panel-offset, 0px);
+}
+
 /* ── 近全屏弹窗（变体一）── 公共结构样式 ─────────────────────── */
 /* 用法：a-modal 加 wrap-class-name；内部用 .modal-body-scroll + .modal-footer 分区 */
 /* 公共块（适用于任意带 wrap-class-name 的近全屏弹窗） */
@@ -412,7 +456,8 @@ html.login-page-open body #app::-webkit-scrollbar {
 .example-modal .ant-modal {
   margin: 0 auto;
   padding: 0;
-  max-width: calc(100vw - 48px);
+  /* 宽度按扣除 AI 面板后的剩余区域计算，面板打开时弹窗仍保留四周 24px 安全边距 - RB-021 */
+  max-width: calc(100vw - var(--ai-panel-offset, 0px) - 48px);
   top: 24px;
 }
 
@@ -449,7 +494,7 @@ html.login-page-open body #app::-webkit-scrollbar {
 .standard-example-modal .ant-modal {
   margin: 0 auto;
   padding: 0;
-  max-width: calc(100vw - 48px);
+  max-width: calc(100vw - var(--ai-panel-offset, 0px) - 48px);
 }
 
 /* Header、Body、Footer 共用同一圆角框体，内容超长时只滚动 Body */
@@ -570,6 +615,8 @@ html.login-page-open body #app::-webkit-scrollbar {
     justify-content: flex-start;
     flex-direction: column;
     align-items: flex-start;
+    /* AI 入口与右侧操作纵向堆叠后需要行距，避免两行贴边 */
+    row-gap: 10px;
     overflow: visible;
   }
 
@@ -583,6 +630,7 @@ html.login-page-open body #app::-webkit-scrollbar {
     flex: none;
     min-height: 0;
     overflow: visible;
+    /* 按钮组可拖动避让，底部不为其预留留白 - RB-023 */
     padding: 20px 16px;
   }
 

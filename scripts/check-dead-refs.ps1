@@ -72,7 +72,11 @@ $KnownAllowedDeadRefPatterns = @(
     # Match: any prefix + "-R{number}-{8-digit-date}.md"
     '-R\d+-\d{8}\.md$',
     # Match: any prefix + "-{8-digit-date}.md" (e.g., delivery-check report)
-    '-\d{8}\.md$'
+    '-\d{8}\.md$',
+    # Match: demo module "M4 activity-management" (CN escaped) used as naming
+    # example in doc-format.mdc / manual; kept narrow so real module refs
+    # (other names) are still reported
+    '^M4-0\d-\u6D3B\u52A8\u7BA1\u7406'
 )
 
 function Test-IsAllowedByPattern {
@@ -134,6 +138,8 @@ function Should-SkipReference {
     # Skip placeholder paths
     if ($Ref -match '\{[^}]+\}') { return $true }
     if ($Ref -match '\*') { return $true }
+    # Ellipsis marks an illustrative name (e.g. "P01-...xxx.md"), not a real path
+    if ($Ref -match '\.\.\.') { return $true }
 
     # Skip node_modules
     if ($Ref -like '*node_modules*') { return $true }
@@ -160,11 +166,19 @@ function Test-IsKnownAllowed {
 
 # ----- Path resolver (normalize to absolute) -----
 # Resolution strategy:
+#   Tier 0: Treat as path relative to the referencing file's directory
+#           (markdown links such as "../docs/x.md" are resolved this way)
 #   Tier 1: Treat as path relative to project root
 #   Tier 2: If ref is short form (no path separator), search file name index
 function Test-RefExists {
-    param([string]$Ref)
+    param([string]$Ref, [string]$SourceDir)
     $normalized = $Ref -replace '\\', '/'
+
+    # Tier 0: source-file relative
+    if ($SourceDir) {
+        $fromSource = Join-Path $SourceDir $normalized
+        if (Test-Path $fromSource) { return $true }
+    }
 
     # Tier 1: project-root relative
     $absolute = Join-Path $ProjectRoot $normalized
@@ -227,7 +241,7 @@ foreach ($file in $allFiles) {
         foreach ($ref in $refs) {
             if (Should-SkipReference -Ref $ref) { continue }
 
-            if (-not (Test-RefExists -Ref $ref)) {
+            if (-not (Test-RefExists -Ref $ref -SourceDir $file.DirectoryName)) {
                 $issue = [PSCustomObject]@{
                     SourceFile = $relativePath
                     LineNumber = $lineNumber

@@ -18,6 +18,7 @@ alwaysApply: false
 ## 框体结构
 
 - 标准尺寸和近全屏弹窗必须保留四周安全边距；小视口下不得贴边或超出可视区域。
+- 标准尺寸和近全屏弹窗的宽度必须扣除 AI 智能助手面板占用宽度 `--ai-panel-offset`（如 `calc(100vw - var(--ai-panel-offset, 0px) - 48px)`），面板打开时弹窗仍保留安全边距且不进入面板区域。
 - Header、独立滚动的 Body 和固定 Footer 必须位于同一框体。
 - Header 和 Footer 不得随正文滚动；内容溢出时只能由 Body 承担纵向滚动。
 - Ant Design Vue 默认内边距不得导致标题与关闭按钮错位。

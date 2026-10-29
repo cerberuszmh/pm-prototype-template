@@ -12,17 +12,19 @@ import {
 } from "@ant-design/icons-vue";
 import PageTabs from "./PageTabs.vue";
 import NotificationPopover from "./NotificationPopover.vue";
-import AlarmFab from "./AlarmFab.vue";
+import FloatActionGroup from "./FloatActionGroup.vue";
+import AiSparkleIcon from "./AiSparkleIcon.vue";
+import AiAssistantPanel from "./AiAssistantPanel.vue";
 import { useOpenedTabs } from "../composables/useOpenedTabs";
+import { useAiAssistant } from "../composables/useAiAssistant";
+import { appConfig } from "../config/app";
 
 // 共享刷新计数器，与 PageTabs 通过 useOpenedTabs 模块单例同源
 // 计数器自增时，下方 RouterView 的 :key 变化触发组件 remount，等同于浏览器刷新当前 tab
 const { reloadKey } = useOpenedTabs();
 
-// 系统名称占位：新项目启动时替换为正式系统名称，与项目级 PRD §1 保持一致
-const systemName = "系统名称（启动时替换）";
-
-// 2026-07-22 验证清理：临时滚动菜单已完成验证并移除，避免测试入口混入正式模板
+// 系统名称统一来自品牌配置，新项目只需修改 src/config/app.js
+const systemName = appConfig.systemName;
 
 const route = useRoute();
 const router = useRouter();
@@ -53,9 +55,11 @@ const userMenuItems = [
   { key: "logout", label: "退出登录", danger: true },
 ];
 
-// AI 入口当前仅承担模板演示反馈，不引入页面、会话或业务状态
+// V0.x 修订：顶部栏 AI 入口改为开关右侧面板，再次点击即收起 - RB-021
+const { visible: aiPanelVisible, togglePanel: toggleAiPanel } = useAiAssistant();
+
 function handleAiAssistant() {
-  message.success("AI智能助手打开成功");
+  toggleAiPanel();
 }
 
 // 用户菜单复用统一退出逻辑，确保二次确认、反馈和跳转行为保持一致
@@ -150,7 +154,7 @@ const handleUserMenuClick = ({ key }) => {
           <!-- AI 入口位于顶部栏左侧，与右侧用户操作形成稳定分区 -->
           <a-button class="workspace-ai-entry" @click="handleAiAssistant">
             <span class="workspace-ai-entry__content">
-              <span aria-hidden="true">✦</span>
+              <AiSparkleIcon />
               <span>AI智能助手</span>
             </span>
           </a-button>
@@ -181,10 +185,13 @@ const handleUserMenuClick = ({ key }) => {
         <RouterView :key="`${$route.fullPath}#${reloadKey}`" />
       </a-layout-content>
     </a-layout>
+
+    <!-- AI 智能助手面板：作为最右一栏挤压主内容区，不覆盖系统页面；窄屏由组件自身切换为全宽覆盖 -->
+    <AiAssistantPanel v-if="aiPanelVisible" />
   </a-layout>
 
-  <!-- 告警信息悬浮按钮：固定在右下角，按告警数量切换外观与发光提示 -->
-  <AlarmFab />
+  <!-- 右下角方形竖排按钮组：AI 智能助手在上、告警信息在下 -->
+  <FloatActionGroup />
 </template>
 
 <style scoped>
@@ -242,6 +249,15 @@ const handleUserMenuClick = ({ key }) => {
   line-height: 1;
 }
 
+/* 窄屏 Header 改为两行纵向排列（见 global.css），必须解除上方 50px 的 !important 锁高，
+   否则第二行的通知与用户入口会溢出并被标签栏覆盖，导致用户菜单无法点击 */
+@media (max-width: 992px) {
+  :deep(.ant-layout-header.workspace-header) {
+    height: auto !important;
+    line-height: normal !important;
+  }
+}
+
 /*
  * AI 入口采用白色内芯与动态渐变粗边框，胶囊圆角让左右两侧形成半圆。
  * 边框与文字共用同一组渐变色，固定尺寸避免动画触发布局变化。
@@ -264,19 +280,44 @@ const handleUserMenuClick = ({ key }) => {
   color: #1677ff;
   font-weight: 600;
   letter-spacing: 0.5px;
+  /* 淡色底图与边框共用同一组颜色和流动节奏：边框停靠在什么颜色，底图就透出什么颜色 */
+  /* 80% 白底把 18% 色带压到约 4% 的有效浓度，保证是淡淡的彩底且不影响按钮文字对比度 */
   background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    var(--workspace-ai-gradient) border-box;
+    linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8))
+      padding-box,
+    linear-gradient(
+        100deg,
+        rgba(22, 119, 255, 0.18) 0%,
+        rgba(114, 46, 209, 0.18) 24%,
+        rgba(235, 47, 150, 0.18) 48%,
+        rgba(19, 194, 194, 0.18) 72%,
+        rgba(22, 119, 255, 0.18) 100%
+      )
+      padding-box,
+    var(--workspace-ai-gradient) border-box,
+    linear-gradient(
+        100deg,
+        rgba(22, 119, 255, 0.18) 0%,
+        rgba(114, 46, 209, 0.18) 24%,
+        rgba(235, 47, 150, 0.18) 48%,
+        rgba(19, 194, 194, 0.18) 72%,
+        rgba(22, 119, 255, 0.18) 100%
+      )
+      border-box;
   background-position:
     0 0,
+    0% 50%,
+    0% 50%,
     0% 50%;
   background-size:
     100% 100%,
+    300% 100%,
+    300% 100%,
     300% 100%;
   border: 3px solid transparent;
   border-radius: 999px;
   box-shadow: 0 4px 14px rgba(82, 46, 214, 0.22);
-  animation: workspaceAiBorderGradient 7s linear infinite;
+  animation: workspaceAiBorderGradient 30s linear infinite;
   transition:
     box-shadow 0.2s ease,
     filter 0.2s ease;
@@ -304,30 +345,38 @@ const handleUserMenuClick = ({ key }) => {
   background-size: 300% 100%;
   background-clip: text;
   -webkit-background-clip: text;
-  animation: workspaceAiTextGradient 7s linear infinite;
+  animation: workspaceAiTextGradient 30s linear infinite;
 }
 
-/* 背景色首尾使用同一蓝色，循环切换时不会出现突兀跳帧 */
+/* 每 30 秒只流动一轮：前 7 秒（7/30 ≈ 23.333%）完成流动，其余时间静止，避免持续动画干扰阅读 */
+/* 背景色首尾使用同一蓝色，终点与起点视觉一致，静止期和下一轮起播都不会跳色 */
+/* 边框与文字共用相同时长和节点，必须同步修改，否则两者流动会错位 */
 @keyframes workspaceAiBorderGradient {
-  from {
+  0% {
     background-position:
       0 0,
+      0% 50%,
+      0% 50%,
       0% 50%;
   }
 
-  to {
+  23.333%,
+  100% {
     background-position:
       0 0,
+      300% 50%,
+      300% 50%,
       300% 50%;
   }
 }
 
 @keyframes workspaceAiTextGradient {
-  from {
+  0% {
     background-position: 0% 50%;
   }
 
-  to {
+  23.333%,
+  100% {
     background-position: 300% 50%;
   }
 }

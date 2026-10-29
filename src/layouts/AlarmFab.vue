@@ -10,6 +10,17 @@ import { alarmCount } from "../mock/alarms";
 const count = computed(() => alarmCount());
 const hasAlarm = computed(() => count.value > 0);
 
+// tooltip 方向由按钮组按自身位置决定，只取 top / bottom - RB-020
+defineProps({
+  tooltipPlacement: {
+    type: String,
+    default: "top",
+  },
+});
+
+// 层级高于 AI 面板（1110）：告警按钮紧贴面板左缘时提示框不会被面板盖住半截
+const TOOLTIP_OVERLAY_STYLE = { zIndex: 1120 };
+
 // 点击悬浮按钮：根据是否有告警给出差异化占位反馈
 // 原型阶段未接入告警详情页，仅暴露操作结果提示
 function handleClick() {
@@ -22,63 +33,35 @@ function handleClick() {
 </script>
 
 <template>
-  <!-- 使用 Ant Design Vue FloatButton 作为悬浮按钮，默认固定在右下角 -->
-  <a-float-button
-    class="alarm-fab"
-    :class="{ 'alarm-fab--active': hasAlarm }"
-    shape="circle"
-    tooltip="告警信息"
-    aria-label="告警信息"
-    :badge="{ count: count, overflowCount: 99, showZero: false }"
-    :style="{ right: '24px', bottom: '24px' }"
-    @click="handleClick"
+  <!-- 位于右下角按钮组底部，形状与定位由 FloatActionGroup 统一控制 -->
+  <!-- Ant 悬浮按钮自带的 tooltip 固定向左弹出，会盖住左侧 AI 按钮，因此改用外包 tooltip 控制方向 -->
+  <a-tooltip
+    title="告警信息"
+    :placement="tooltipPlacement"
+    :overlay-style="TOOLTIP_OVERLAY_STYLE"
   >
-    <!-- 数量超过 99 显示 99+，0 条告警时不显示徽标 -->
-    <!-- 告警图标槽位，使用感叹号图标表达告警语义 -->
-    <template #icon>
-      <WarningOutlined />
-    </template>
-  </a-float-button>
+    <a-float-button
+      class="alarm-fab"
+      :class="{ 'alarm-fab--active': hasAlarm }"
+      aria-label="告警信息"
+      :badge="{ count: count, overflowCount: 99, showZero: false }"
+      @click="handleClick"
+    >
+      <!-- 数量超过 99 显示 99+，0 条告警时不显示徽标 -->
+      <!-- 告警图标槽位，使用感叹号图标表达告警语义 -->
+      <template #icon>
+        <WarningOutlined />
+      </template>
+    </a-float-button>
+  </a-tooltip>
 </template>
 
 <style scoped>
-/* 无告警时：完全依赖 Ant Design FloatButton 默认样式（白底、深色图标、阴影） */
+/* 无告警时：完全依赖 Ant Design FloatButton 默认样式（白底、深色图标） */
+/* 徽标也保持 Ant 默认红底白字，白底按钮上无需再做反色覆盖 */
 
-/* 有告警时：覆盖 root 与 body 背景为红色，并触发红色呼吸发光动画 */
-.alarm-fab.ant-float-btn.alarm-fab--active,
-.alarm-fab.ant-float-btn.alarm-fab--active :deep(.ant-float-btn-body),
-.alarm-fab.ant-float-btn.alarm-fab--active :deep(.ant-float-btn-body:hover) {
-  background: #ff4d4f;
-}
-
-.alarm-fab.ant-float-btn.alarm-fab--active {
-  box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.4);
-  animation: alarm-fab-glow 2s ease-in-out infinite;
-}
-
-/* 有告警时：图标切换为白色，确保在红底上有足够对比度 */
+/* 有告警时：只把图标改为红色，底色保持白色，与组内 AI 按钮视觉统一 */
 .alarm-fab.ant-float-btn.alarm-fab--active :deep(.ant-float-btn-content .ant-float-btn-icon) {
-  color: #ffffff;
-}
-
-/* 徽标覆盖：白底黑字，与红底按钮形成对比 */
-.alarm-fab.ant-float-btn.alarm-fab--active :deep(.ant-badge-count) {
-  background: #ffffff;
-  color: rgba(0, 0, 0, 0.88);
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* 红色呼吸发光动画：由实到虚的环形扩散，模拟告警呼吸提示 */
-@keyframes alarm-fab-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 12px rgba(255, 77, 79, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
-  }
+  color: #ff4d4f;
 }
 </style>

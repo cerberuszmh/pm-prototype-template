@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, computed } from "vue";
 import { message, Modal } from "ant-design-vue";
+import dayjs from "dayjs";
 import {
   EllipsisOutlined,
   PlusOutlined,
@@ -154,6 +155,8 @@ function handleBatchMenu({ key }) {
 // ──────────────────────────────────────────────────────────────
 // 表格列定义
 // 操作列固定靠右，宽度 130px 容纳"编辑 + 修改"两个链接按钮
+// 模板中 scroll.x 取各列宽之和加名称列最小宽度：窄屏改为横向滚动，
+// 避免未定宽的名称列被挤成每行一个字，fixed 操作列也依赖它才生效
 // ──────────────────────────────────────────────────────────────
 const columns = [
   { title: "编号", dataIndex: "id", width: 140 },
@@ -271,9 +274,14 @@ function openViewModal(record) {
   viewModalOpen.value = true;
 }
 
-// 关闭弹窗：重置表单与校验状态，避免下次打开残留红色错误提示
+// 关闭弹窗：只切换 open，表单重置交给关闭动画结束后的 resetForm
 function handleClose() {
   modalOpen.value = false;
+}
+
+// 关闭动画期间弹窗仍可见，立即重置会闪现空值和校验红字，故延后到 after-close
+// 同时覆盖取消、关闭图标与保存三条关闭路径，避免下次打开残留校验状态
+function resetForm() {
   formRef.value?.resetFields();
 }
 
@@ -299,9 +307,11 @@ function openStandardModal(record) {
 // 统一处理取消按钮、关闭图标和遮罩关闭产生的 open 状态变化
 function handleStandardOpenChange(open) {
   standardModalOpen.value = open;
-  if (!open) {
-    standardFormRef.value?.resetFields();
-  }
+}
+
+// 与近全屏弹窗一致：关闭动画结束后再重置，避免闪现修改前的旧值
+function resetStandardForm() {
+  standardFormRef.value?.resetFields();
 }
 
 // 标准弹窗保存：校验通过后就地更新当前记录，保持列表响应式引用稳定
@@ -339,11 +349,8 @@ function handleSubmit() {
           id: nextExampleId(),
           name: formData.name,
           status: formData.status,
-          // 创建时间用本地当前时刻，与列表默认排序字段对齐
-          createTime: new Date()
-            .toISOString()
-            .replace("T", " ")
-            .substring(0, 19),
+          // 必须按本地时区格式化：toISOString 输出 UTC，会比 Mock 种子数据慢 8 小时
+          createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         });
         message.success("保存成功");
       } else {
@@ -436,6 +443,7 @@ function handleSubmit() {
         :custom-row="customRow"
         row-key="id"
         size="middle"
+        :scroll="{ x: 720 }"
         :pagination="{
           defaultPageSize: 10,
           showTotal: (total) => `共 ${total} 条数据`,
@@ -510,13 +518,15 @@ function handleSubmit() {
     </a-card>
 
     <!-- 新建/编辑弹窗：近全屏弹窗变体一，四周留 24px 间距 -->
+    <!-- 宽度扣除 AI 面板占用宽度，面板打开时弹窗在剩余区域内居中、不钻到面板下方 - RB-021 -->
     <a-modal
       :open="modalOpen"
       :title="modalTitle"
-      width="calc(100vw - 48px)"
+      width="calc(100vw - var(--ai-panel-offset, 0px) - 48px)"
       :footer="null"
       :mask-closable="false"
       wrap-class-name="example-modal"
+      :after-close="resetForm"
       @update:open="(val) => (modalOpen = val)"
     >
       <div class="modal-body-scroll">
@@ -574,6 +584,7 @@ function handleSubmit() {
       centered
       :mask-closable="false"
       wrap-class-name="standard-example-modal"
+      :after-close="resetStandardForm"
       @ok="handleStandardSubmit"
       @update:open="handleStandardOpenChange"
     >

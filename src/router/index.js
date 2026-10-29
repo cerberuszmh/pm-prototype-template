@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import WorkspaceLayout from "../layouts/WorkspaceLayout.vue";
+import { appConfig } from "../config/app";
 
 // 真实页面：懒加载，减少首屏体积
 const NotFoundView = () => import("../views/NotFoundView.vue");
@@ -34,7 +35,7 @@ const routes = [
     component: LoginView,
     meta: {
       title: "登录",
-      description: "示例管理系统登录页。",
+      description: `${appConfig.systemName}登录页。`,
     },
   },
   {
