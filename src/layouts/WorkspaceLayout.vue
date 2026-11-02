@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { h, reactive, ref, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { message, Modal } from "ant-design-vue";
 import {
@@ -29,25 +29,91 @@ const systemName = appConfig.systemName;
 const route = useRoute();
 const router = useRouter();
 
-// 当前高亮的菜单项 key，由路由 meta.menuKey 决定
-const selectedKeys = computed(() => [route.meta.menuKey ?? "home"]);
-
-// 当前展开的子菜单分组列表
-const openKeys = ref([]);
-
-// 侧边栏收起状态，由底部按钮控制
+// 侧边栏收起状态，由底部按钮控制（与 ant-design-vue Collapsed inline menu 示例一致）
 const collapsed = ref(false);
 
-// 路由切换时，自动展开当前页所属的菜单分组，避免用户手动找位置
+/** 与 ant-design-vue 文档 Inline menu / items 示例一致的构造 helper */
+function getSideMenuItem(label, key, icon, children) {
+  return {
+    key,
+    icon,
+    children,
+    label,
+  };
+}
+
+// 菜单 item.key 与 vue-router 的 route.name 一致；新模块追加时同步改 router 与 ROUTE_MENU_KEYS
+const sideMenuItems = reactive([
+  getSideMenuItem("系统首页", "home", () => h(HomeOutlined)),
+  getSideMenuItem("示例模块", "grp-example", () => h(AppstoreOutlined), [
+    getSideMenuItem("示例列表", "example-list"),
+    getSideMenuItem("分组列表", "example-group-list"),
+  ]),
+]);
+
+const ROUTE_MENU_KEYS = new Set(["home", "example-list", "example-group-list"]);
+
+const selectedKeys = ref(["home"]);
+const openKeys = ref([]);
+const preOpenKeys = ref([]);
+
+watch(openKeys, (_val, oldVal) => {
+  if (!collapsed.value && oldVal && oldVal.length) {
+    preOpenKeys.value = oldVal;
+  }
+});
+
+watch(collapsed, (isCollapsed) => {
+  if (isCollapsed) {
+    openKeys.value = [];
+    return;
+  }
+  if (preOpenKeys.value.length) {
+    openKeys.value = [...preOpenKeys.value];
+    return;
+  }
+  const group = route.meta.menuGroup;
+  if (group) {
+    openKeys.value = [group];
+  }
+});
+
+watch(
+  () => route.meta.menuKey ?? route.name,
+  (key) => {
+    if (!key || key === "not-found") {
+      return;
+    }
+    const nextKey = String(key);
+    if (selectedKeys.value[0] !== nextKey) {
+      selectedKeys.value = [nextKey];
+    }
+  },
+  { immediate: true }
+);
+
 watch(
   () => route.meta.menuGroup,
   (group) => {
-    if (group && !openKeys.value.includes(group)) {
+    if (collapsed.value || !group) {
+      return;
+    }
+    if (!openKeys.value.includes(group)) {
       openKeys.value = [group];
     }
   },
   { immediate: true }
 );
+
+function handleMenuClick({ key }) {
+  if (!ROUTE_MENU_KEYS.has(key)) {
+    return;
+  }
+  if (route.name === key) {
+    return;
+  }
+  router.push({ name: key });
+}
 
 // V0.x 修订：用户下拉菜单只保留个人设置与退出登录，收敛顶部操作入口 - RB-017
 const userMenuItems = [
@@ -108,33 +174,17 @@ const handleUserMenuClick = ({ key }) => {
         <div class="workspace-brand__title">{{ systemName }}</div>
       </div>
 
-      <!-- 主导航菜单，inline 模式支持多级展开 -->
+      <!-- 主导航：ant-design-vue Inline menu + items 官方写法，见 https://www.antdv.com/components/menu -->
       <a-menu
         class="workspace-sider__menu"
         theme="dark"
         mode="inline"
         v-model:open-keys="openKeys"
-        :selected-keys="selectedKeys"
-      >
-        <!-- ── 系统首页 ── -->
-        <a-menu-item key="home">
-          <template #icon><HomeOutlined /></template>
-          <router-link to="/">系统首页</router-link>
-        </a-menu-item>
-
-        <!-- ── 示例模块分组 ──
-             模板默认保留 1 个示例分组，新模块启动时按此样式在下方追加 a-sub-menu -->
-        <a-sub-menu key="grp-example">
-          <template #icon><AppstoreOutlined /></template>
-          <template #title>示例模块</template>
-          <a-menu-item key="example-list">
-            <router-link to="/example/list">示例列表</router-link>
-          </a-menu-item>
-          <a-menu-item key="example-group-list">
-            <router-link to="/example/group-list">分组列表</router-link>
-          </a-menu-item>
-        </a-sub-menu>
-      </a-menu>
+        v-model:selected-keys="selectedKeys"
+        :inline-collapsed="collapsed"
+        :items="sideMenuItems"
+        @click="handleMenuClick"
+      />
 
       <!-- 侧边栏底部收起按钮：与菜单项同高，固定在最下方 -->
       <div
