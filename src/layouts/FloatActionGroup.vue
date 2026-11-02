@@ -11,7 +11,7 @@ const { panelOccupiedWidth } = useAiAssistant();
 
 // V0.x 修订：按钮组可拖动到任意位置，避免盖住弹窗底部按钮等内容 - RB-020
 // 拖动只能从按钮组左侧常显的拖拽把手发起，按钮本身只负责点击，光标保持点击手型 - RB-025
-const DEFAULT_OFFSET = 24;
+const DEFAULT_BOTTOM = 24;
 // 与可视区域边缘保留的最小距离，防止拖到屏幕外无法找回
 const EDGE_MARGIN = 8;
 // 移动超过该距离才算拖动，单纯按下拖拽条不切换为抓取光标
@@ -20,8 +20,10 @@ const DRAG_THRESHOLD = 4;
 const containerRef = ref(null);
 // 位置以「距可用区域右边、距视口底边」记录：AI 面板开合时按钮组随可用区域平移，不会钻到面板下方
 // 仅保存在组件内存中：布局常驻，切换页面保持位置；刷新页面恢复默认
-const offsetRight = ref(DEFAULT_OFFSET);
-const offsetBottom = ref(DEFAULT_OFFSET);
+// V0.x 修订：默认位置改为可用区域底部水平居中，落在近全屏弹窗底部操作栏中间空白处，不遮挡右下角主操作 - RB-034
+// offsetRight 为 null 表示用户尚未拖动：此时按可用区域实时居中，AI 面板开合或窗口缩放后仍保持居中
+const offsetRight = ref(null);
+const offsetBottom = ref(DEFAULT_BOTTOM);
 const isDragging = ref(false);
 
 // 视口与容器尺寸用于把位置限制在可视区域内；容器包含拖拽条
@@ -62,7 +64,14 @@ function clampBottom(value) {
 }
 
 // 渲染时再做一次收敛：拖动后若面板打开或窗口变小，按钮组自动回到可视范围内
-const clampedRight = computed(() => clampRight(offsetRight.value));
+const clampedRight = computed(() => {
+  if (offsetRight.value === null) {
+    const availableWidth = viewportWidth.value - panelOccupiedWidth.value;
+    const centeredRight = (availableWidth - containerWidth.value) / 2;
+    return clampRight(centeredRight);
+  }
+  return clampRight(offsetRight.value);
+});
 const clampedBottom = computed(() => clampBottom(offsetBottom.value));
 
 const containerStyle = computed(() => ({
