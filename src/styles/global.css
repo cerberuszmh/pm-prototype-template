@@ -307,6 +307,11 @@ html.login-page-open body #app::-webkit-scrollbar {
   padding: 18px;
 }
 
+/* 行内表单只有右侧 16px 间距，窄屏换行后上下两行会贴合；补同值行距，单行时不生效 - RB-031 */
+.page-stack .filter-card .ant-form-inline {
+  row-gap: 16px;
+}
+
 /* 兼容仍使用 a-space 包裹的页面：间距只走 gap，清零 item 默认 margin */
 .page-stack.ant-space.ant-space-vertical {
   gap: var(--page-section-gap) !important;
@@ -322,8 +327,66 @@ html.login-page-open body #app::-webkit-scrollbar {
   padding: 12px 8px !important;
 }
 
+/* V0.x 修订：数据行统一 44px，与含操作列（小号按钮 24px）的列表行高对齐 - RB-029
+   td 的 height 等效于最小高度，内容更高时仍可自然撑开 */
 .ant-table-tbody > tr > td.ant-table-cell {
   padding: 10px 8px !important;
+  height: 44px;
+}
+
+/* ── 表格行动画（vue-list-view.mdc ## 表格行动画）──────────────── */
+/* 动画挂在 td 而非 tr：右侧固定列的 td 为 sticky 定位，只动 tr 会让固定列与其余单元格脱节；
+   时长须与 useRowMotion.js 中的常量一致 */
+/* 新增与修改共用同一段高亮，视觉强度一致；新增额外叠加滑入，以此与修改区分 */
+.ant-table-tbody > tr.row-motion-enter > td {
+  animation:
+    rowMotionEnter 500ms ease-out backwards,
+    rowMotionHighlight 2000ms ease-out;
+}
+
+/* forwards 保持出场末帧，避免数据移除前的间隙里行重新闪现 */
+.ant-table-tbody > tr.row-motion-leave > td {
+  animation: rowMotionLeave 500ms ease-in forwards;
+}
+
+.ant-table-tbody > tr.row-motion-update > td {
+  animation: rowMotionHighlight 2000ms ease-out;
+}
+
+@keyframes rowMotionEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes rowMotionLeave {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* 前 40% 保持高亮让用户看清，再渐隐回原背景 */
+@keyframes rowMotionHighlight {
+  0%,
+  40% {
+    background-color: #e6f4ff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ant-table-tbody > tr[class*="row-motion-"] > td {
+    animation: none;
+  }
 }
 
 /* ── 多标签页导航（PageTabs）──────────────────────────────────── */
@@ -521,7 +584,9 @@ body .ant-image-preview-root .ant-image-preview-wrap {
   padding: 20px 24px;
 }
 
+/* 底部需为 flex 容器，.modal-footer__right 的 margin-left: auto 才能靠右 - R2 P3-004 */
 .standard-example-modal .ant-modal-footer {
+  display: flex;
   flex-shrink: 0;
   margin-top: 0;
   padding: 10px 16px;
@@ -536,7 +601,7 @@ body .ant-image-preview-root .ant-image-preview-wrap {
 }
 
 /* 查看弹窗：只读小弹窗，内容少不需要滚动分区，但标题/底部分隔线与边距 */
-/* 必须与编辑、修改弹窗保持一致，避免同页弹窗框体语言不统一 */
+/* 必须与编辑、快速编辑弹窗保持一致，避免同页弹窗框体语言不统一 */
 .view-example-modal .ant-modal-content {
   padding: 0;
   overflow: hidden;
@@ -554,6 +619,7 @@ body .ant-image-preview-root .ant-image-preview-wrap {
 }
 
 .view-example-modal .ant-modal-footer {
+  display: flex;
   margin-top: 0;
   padding: 10px 16px;
   border-top: 1px solid #f0f0f0;

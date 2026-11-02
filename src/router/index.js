@@ -13,6 +13,8 @@ const PlaceholderView = () => import("../views/PlaceholderView.vue");
 
 // 示例模块路由：模板默认保留 1 个示例分组，新模块启动时按此样式新增
 const ExampleListView = () => import("../views/example/ExampleListView.vue");
+const ExampleGroupListView = () =>
+  import("../views/example/ExampleGroupListView.vue");
 
 // 辅助函数：快速生成占位路由，新模块未实现前先用占位页占位
 // path / key / title / group / parentTitle 五项与左侧菜单的 key 与展示文案一致
@@ -64,6 +66,19 @@ const routes = [
           title: "示例列表",
           description: "示例列表 · 新建 · 编辑（示例模块）",
           menuKey: "example-list",
+          menuGroup: "grp-example",
+          parentTitle: "示例模块",
+        },
+      },
+      // V0.x 修订：左侧分组树筛选右侧列表 - RB-028
+      {
+        path: "example/group-list",
+        name: "example-group-list",
+        component: ExampleGroupListView,
+        meta: {
+          title: "分组列表",
+          description: "分组树筛选 · 列表（示例模块）",
+          menuKey: "example-group-list",
           menuGroup: "grp-example",
           parentTitle: "示例模块",
         },

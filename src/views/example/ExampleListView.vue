@@ -7,35 +7,118 @@ import {
   PlusOutlined,
   SwapOutlined,
 } from "@ant-design/icons-vue";
-import { exampleList, nextExampleId } from "../../mock/example";
-import { EXAMPLE_STATUS, findEnumLabel } from "../../mock/enums";
+import FilterBar from "../../components/FilterBar.vue";
+import { useRowMotion } from "../../composables/useRowMotion";
+import {
+  exampleList,
+  exampleGroupTree,
+  exampleGroupPathMap,
+  nextExampleId,
+} from "../../mock/example";
+import {
+  EXAMPLE_STATUS,
+  EXAMPLE_CATEGORY,
+  findEnumLabel,
+} from "../../mock/enums";
+
+// ──────────────────────────────────────────────────────────────
+// FIX-003 修订：示例记录新增所属分组，列表与查看弹窗显示完整路径
+// 不同区域下可能存在同名分部或站点，只显示节点名称会无法区分
+// R3 P3-003 修订：路径映射改由 mock 统一导出，与分组列表共用同一份口径
+// ──────────────────────────────────────────────────────────────
+const groupPathMap = exampleGroupPathMap;
+
+// 分组树节点以 key/title 命名，树形下拉按 value/label 读取，需显式映射
+const groupFieldNames = { label: "title", value: "key", children: "children" };
+
+// R3 TBD-002 修订（方案 A）：下拉中仍按节点名称逐级浏览，选中后回显完整路径，
+// 与列表、查看弹窗口径一致；复制节点附加 pathLabel，避免改动只读的共享分组树
+function buildGroupSelectTree(nodes) {
+  return nodes.map((node) => {
+    const option = {
+      key: node.key,
+      title: node.title,
+      pathLabel: exampleGroupPathMap[node.key],
+    };
+    if (node.children) {
+      option.children = buildGroupSelectTree(node.children);
+    }
+    return option;
+  });
+}
+const groupSelectTree = buildGroupSelectTree(exampleGroupTree);
 
 // ──────────────────────────────────────────────────────────────
 // 筛选状态：搜索栏字段
 // ──────────────────────────────────────────────────────────────
+// V0.x 修订：新增创建时间范围筛选，按天选择 - RB-026
+// createTimeRange 为 ["YYYY-MM-DD", "YYYY-MM-DD"]，未选择时为 undefined
+// V0.x 修订：新增分类多选筛选，categories 为分类 value 数组 - RB-027
 const filters = reactive({
   name: "",
   status: undefined,
+  categories: [],
+  createTimeRange: undefined,
 });
 
 // P2-04 修订：编辑态与已提交态分离，避免输入过程中列表提前变化
 const appliedFilters = reactive({
   name: "",
   status: undefined,
+  categories: [],
+  createTimeRange: undefined,
 });
 
 // 查询时才提交筛选条件，让按钮承担明确的查询触发职责
+// 分类数组复制一份再提交，避免编辑态后续增删选项时联动改变已提交态
 function handleSearch() {
   appliedFilters.name = filters.name.trim();
   appliedFilters.status = filters.status;
+  appliedFilters.categories = [...filters.categories];
+  appliedFilters.createTimeRange = filters.createTimeRange;
+  resetListView();
 }
 
 // 重置时同步清空编辑态和已提交态，列表立即回到全量
 function handleReset() {
   filters.name = "";
   filters.status = undefined;
+  filters.categories = [];
+  filters.createTimeRange = undefined;
   appliedFilters.name = "";
   appliedFilters.status = undefined;
+  appliedFilters.categories = [];
+  appliedFilters.createTimeRange = undefined;
+  resetListView();
+}
+
+// R2 P2-001 / TBD-001 修订：结果集变化后原页码可能越界，已选记录也可能不在新结果中，
+// 统一回到第 1 页并清空选择，避免批量操作作用于当前列表看不到的记录
+function resetListView() {
+  pagination.current = 1;
+  clearSelectedRows();
+}
+
+// 多选筛选为"命中任一即显示"；未选择任何分类视为不筛选
+function matchCategories(category) {
+  const selected = appliedFilters.categories;
+  if (selected.length === 0) {
+    return true;
+  }
+  return selected.includes(category);
+}
+
+// 按天筛选需包含起止两天整天，故只取 createTime 的日期部分比较；
+// 两侧均为 YYYY-MM-DD 格式，字符串比较即等价于日期比较
+function matchCreateTimeRange(createTime) {
+  const range = appliedFilters.createTimeRange;
+  if (!range || range.length !== 2) {
+    return true;
+  }
+  const createDate = createTime.slice(0, 10);
+  const afterStart = createDate >= range[0];
+  const beforeEnd = createDate <= range[1];
+  return afterStart && beforeEnd;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -52,12 +135,35 @@ const filteredList = computed(() => {
     const matchStatus = appliedFilters.status
       ? item.status === appliedFilters.status
       : true;
-    return matchName && matchStatus;
+    const matchCategory = matchCategories(item.category);
+    const matchTime = matchCreateTimeRange(item.createTime);
+    return matchName && matchStatus && matchCategory && matchTime;
   });
   // 字符串日期 ISO 格式可直接 localeCompare 降序
   list = list.sort((a, b) => b.createTime.localeCompare(a.createTime));
   return list;
 });
+
+// R2 P2-001 修订：分页改为受控，查询、重置才能主动回到第 1 页（与分组列表口径一致）
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+});
+
+const tablePagination = computed(() => ({
+  current: pagination.current,
+  pageSize: pagination.pageSize,
+  showTotal: (total) => `共 ${total} 条数据`,
+  showSizeChanger: true,
+  pageSizeOptions: ["10", "20", "30", "50"],
+  showQuickJumper: true,
+}));
+
+// 翻页与切换每页条数都经由此回传，保持受控状态与表格一致
+function handleTableChange(page) {
+  pagination.current = page.current;
+  pagination.pageSize = page.pageSize;
+}
 
 // ──────────────────────────────────────────────────────────────
 // 2026-07-22 修订：列表多选与批量操作示例，已归档记录禁止再次选中
@@ -121,18 +227,99 @@ function customRow(record) {
   };
 }
 
+// ──────────────────────────────────────────────────────────────
+// 表格行动画：新增进场、修改高亮、删除出场 - vue-list-view.mdc ## 表格行动画
+// ──────────────────────────────────────────────────────────────
+const { playEnter, playUpdate, playLeave, rowMotionClass } = useRowMotion();
+
+function rowClassName(record) {
+  return rowMotionClass(record.id);
+}
+
 // 主按钮执行默认批量操作：将选中记录统一切换为已发布
 function handleBatchPublish() {
   const records = getSelectedRecords();
   records.forEach((record) => {
     record.status = "published";
   });
+  playUpdate(records.map((record) => record.id));
   message.success(`已批量发布 ${records.length} 条记录`);
   clearSelectedRows();
 }
 
-// 下拉菜单承载危险批量操作，归档前必须二次确认
+// ──────────────────────────────────────────────────────────────
+// V0.x 修订：新增删除，仅草稿可删除，删除前二次确认 - RB-033
+// 已发布、已归档记录已对外生效或已终止，删除会丢失业务痕迹，故不允许
+// ──────────────────────────────────────────────────────────────
+function canDelete(record) {
+  return record.status === "draft";
+}
+
+// 先播放出场动画再移除数据；同步移出勾选，避免已选条数统计到不存在的记录
+function removeRecords(ids) {
+  playLeave(ids, () => {
+    ids.forEach((id) => {
+      const index = exampleList.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        exampleList.splice(index, 1);
+      }
+    });
+    selectedRowKeys.value = selectedRowKeys.value.filter(
+      (key) => !ids.includes(key)
+    );
+  });
+}
+
+function handleDelete(record) {
+  // 逻辑层再次拦截，防止绕过按钮禁用态删除非草稿记录
+  if (!canDelete(record)) {
+    return;
+  }
+  Modal.confirm({
+    title: `确认删除「${record.name}」？`,
+    content: "删除后不可恢复，请确认是否继续。",
+    okText: "确认",
+    cancelText: "取消",
+    onOk() {
+      removeRecords([record.id]);
+      message.success("示例记录已删除");
+    },
+  });
+}
+
+// 批量删除只处理草稿，已发布记录跳过；确认弹窗写明删除与跳过条数，避免用户误以为全部删除
+// 混选口径见 SRS §5.6.4 - RB-033
+function handleBatchDelete() {
+  const records = getSelectedRecords();
+  const deletable = records.filter((record) => canDelete(record));
+  if (deletable.length === 0) {
+    message.warning("已选记录中没有可删除的草稿记录");
+    return;
+  }
+  const skipped = records.length - deletable.length;
+  let content = "删除后不可恢复，请确认是否继续。";
+  if (skipped > 0) {
+    content = `其中 ${skipped} 条非草稿记录不可删除，将被跳过。删除后不可恢复，请确认是否继续。`;
+  }
+  Modal.confirm({
+    title: `确认删除已选择的 ${deletable.length} 条草稿记录？`,
+    content,
+    okText: "确认",
+    cancelText: "取消",
+    onOk() {
+      removeRecords(deletable.map((record) => record.id));
+      message.success(`已批量删除 ${deletable.length} 条记录`);
+      clearSelectedRows();
+    },
+  });
+}
+
+// 下拉菜单承载危险批量操作，归档、删除前必须二次确认
 function handleBatchMenu({ key }) {
+  if (key === "delete") {
+    handleBatchDelete();
+    return;
+  }
   if (key !== "archive") {
     return;
   }
@@ -146,6 +333,7 @@ function handleBatchMenu({ key }) {
       records.forEach((record) => {
         record.status = "archived";
       });
+      playUpdate(records.map((record) => record.id));
       message.success(`已批量归档 ${records.length} 条记录`);
       clearSelectedRows();
     },
@@ -154,16 +342,19 @@ function handleBatchMenu({ key }) {
 
 // ──────────────────────────────────────────────────────────────
 // 表格列定义
-// 操作列固定靠右，宽度 130px 容纳"编辑 + 修改"两个链接按钮
+// 操作列固定靠右，宽度 210px 容纳"编辑 + 快速编辑 + 删除"三个链接按钮 - RB-033
 // 模板中 scroll.x 取各列宽之和加名称列最小宽度：窄屏改为横向滚动，
 // 避免未定宽的名称列被挤成每行一个字，fixed 操作列也依赖它才生效
+// FIX-003 修订：新增 240px 所属分组列，scroll.x 由 920 同步增至 1160
 // ──────────────────────────────────────────────────────────────
 const columns = [
   { title: "编号", dataIndex: "id", width: 140 },
   { title: "名称", dataIndex: "name" },
+  { title: "分类", dataIndex: "category", width: 120 },
+  { title: "所属分组", dataIndex: "groupKey", width: 240 },
   { title: "状态", dataIndex: "status", width: 120 },
   { title: "创建时间", dataIndex: "createTime", width: 180 },
-  { title: "操作", key: "action", fixed: "right", width: 130 },
+  { title: "操作", key: "action", fixed: "right", width: 210 },
 ];
 
 // ──────────────────────────────────────────────────────────────
@@ -192,12 +383,18 @@ function handleStatusChange(record, newValue) {
       cancelText: "取消",
       onOk() {
         record.status = newValue;
+        // R2 P2-002 修订：归档后复选框被禁用，必须同步移出已选，否则批量操作会混入终态记录
+        selectedRowKeys.value = selectedRowKeys.value.filter(
+          (key) => key !== record.id
+        );
+        playUpdate([record.id]);
         message.success(`已切换为 ${newLabel} 状态`);
       },
     });
     return;
   }
   record.status = newValue;
+  playUpdate([record.id]);
   message.success(`已切换为 ${newLabel} 状态`);
 }
 
@@ -232,15 +429,24 @@ const editableStatusOptions = computed(() => {
 const formRef = ref(null);
 const formData = reactive({
   name: "",
+  category: undefined,
+  groupKey: undefined,
   status: "draft",
 });
 
 // 表单校验规则：必填字段必须显式挂 :rules，接入 AntD validate 链路
 // 仅 required 视觉星号写法会导致"看着像必填、提交时静默通过"的缺陷
+// R2 P2-003 修订：whitespace 使仅含空格的名称同样判为未填写，避免生成空白名称记录
 const formRules = {
   name: [
-    { required: true, message: "请输入名称", trigger: "blur" },
+    { required: true, whitespace: true, message: "请输入名称", trigger: "blur" },
     { max: 50, message: "名称不超过 50 字", trigger: "blur" },
+  ],
+  // 下拉选择没有 blur 输入过程，选中即校验，故用 change 触发
+  category: [{ required: true, message: "请选择分类", trigger: "change" }],
+  // FIX-003 修订：每条记录必须归属一个分组，否则在分组列表中只能从「全部」找到
+  groupKey: [
+    { required: true, message: "请选择所属分组", trigger: "change" },
   ],
 };
 
@@ -249,6 +455,8 @@ function openCreateModal() {
   modalMode.value = "create";
   editingId.value = null;
   formData.name = "";
+  formData.category = undefined;
+  formData.groupKey = undefined;
   formData.status = "draft";
   modalOpen.value = true;
 }
@@ -258,6 +466,8 @@ function openEditModal(record) {
   modalMode.value = "edit";
   editingId.value = record.id;
   formData.name = record.name;
+  formData.category = record.category;
+  formData.groupKey = record.groupKey;
   formData.status = record.status;
   modalOpen.value = true;
 }
@@ -274,9 +484,24 @@ function openViewModal(record) {
   viewModalOpen.value = true;
 }
 
+// 模板内禁止直接给 ref 赋值，关闭动作收口到具名函数
+function closeViewModal() {
+  viewModalOpen.value = false;
+}
+
+// R3 P3-004 修订：关闭图标与遮罩回传的 open 状态同样经具名函数写入，与分组列表一致
+function handleViewOpenChange(open) {
+  viewModalOpen.value = open;
+}
+
 // 关闭弹窗：只切换 open，表单重置交给关闭动画结束后的 resetForm
 function handleClose() {
   modalOpen.value = false;
+}
+
+// R3 P3-004 修订：近全屏弹窗关闭图标回传的 open 状态经具名函数写入
+function handleModalOpenChange(open) {
+  modalOpen.value = open;
 }
 
 // 关闭动画期间弹窗仍可见，立即重置会闪现空值和校验红字，故延后到 after-close
@@ -286,13 +511,16 @@ function resetForm() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// 2026-07-22 修订：标准尺寸修改弹窗与近全屏编辑弹窗分离，便于对照两种弹窗规格
+// 2026-07-22 修订：标准尺寸快速编辑弹窗与近全屏编辑弹窗分离，便于对照两种弹窗规格
+// V1.2 修订：入口由"修改"更名为"快速编辑"，避免与"编辑"成为同义按钮 - SRS §5.2
 // ──────────────────────────────────────────────────────────────
 const standardModalOpen = ref(false);
 const standardFormRef = ref(null);
 const standardEditingId = ref(null);
 const standardFormData = reactive({
   name: "",
+  category: undefined,
+  groupKey: undefined,
   status: "draft",
 });
 
@@ -300,6 +528,8 @@ const standardFormData = reactive({
 function openStandardModal(record) {
   standardEditingId.value = record.id;
   standardFormData.name = record.name;
+  standardFormData.category = record.category;
+  standardFormData.groupKey = record.groupKey;
   standardFormData.status = record.status;
   standardModalOpen.value = true;
 }
@@ -307,6 +537,11 @@ function openStandardModal(record) {
 // 统一处理取消按钮、关闭图标和遮罩关闭产生的 open 状态变化
 function handleStandardOpenChange(open) {
   standardModalOpen.value = open;
+}
+
+// 自定义底部的「取消」不经过 a-modal 内置事件，需显式关闭
+function closeStandardModal() {
+  handleStandardOpenChange(false);
 }
 
 // 与近全屏弹窗一致：关闭动画结束后再重置，避免闪现修改前的旧值
@@ -323,15 +558,25 @@ function handleStandardSubmit() {
         (item) => item.id === standardEditingId.value
       );
       if (record) {
-        record.name = standardFormData.name;
+        record.name = standardFormData.name.trim();
+        record.category = standardFormData.category;
+        record.groupKey = standardFormData.groupKey;
         record.status = standardFormData.status;
+        playUpdate([record.id]);
       }
       message.success("保存成功");
       handleStandardOpenChange(false);
     })
-    .catch(() => {
-      // 标准弹窗仅两个字段，均在视口内，可按规范省略自动滚动
+    .catch((errorInfo) => {
       message.warning("请完善必填项后再操作");
+      // FIX-003 修订：新增所属分组后字段增至 4 个，超出规范允许省略滚动的 3 个上限
+      const firstField = errorInfo?.errorFields?.[0]?.name;
+      if (firstField && standardFormRef.value?.scrollToField) {
+        standardFormRef.value.scrollToField(firstField, {
+          behavior: "smooth",
+          block: "center",
+        });
+      }
     });
 }
 
@@ -345,20 +590,28 @@ function handleSubmit() {
     .then(() => {
       if (modalMode.value === "create") {
         // 新建：push 到 reactive 数组，computed 自动重新排序
+        const newId = nextExampleId();
+        // 名称去除首尾空格后入库，与查询侧的 trim 口径一致
         exampleList.push({
-          id: nextExampleId(),
-          name: formData.name,
+          id: newId,
+          name: formData.name.trim(),
+          category: formData.category,
+          groupKey: formData.groupKey,
           status: formData.status,
           // 必须按本地时区格式化：toISOString 输出 UTC，会比 Mock 种子数据慢 8 小时
           createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
         });
+        playEnter(newId);
         message.success("保存成功");
       } else {
         // 编辑：找到原记录就地更新，保持数组引用稳定
         const record = exampleList.find((item) => item.id === editingId.value);
         if (record) {
-          record.name = formData.name;
+          record.name = formData.name.trim();
+          record.category = formData.category;
+          record.groupKey = formData.groupKey;
           record.status = formData.status;
+          playUpdate([record.id]);
         }
         message.success("保存成功");
       }
@@ -381,9 +634,9 @@ function handleSubmit() {
 
 <template>
   <div class="page-stack">
-    <!-- 筛选卡：查询/重置始终可见，不折叠 -->
+    <!-- 筛选卡：查询/重置始终可见；一行放不下时由 FilterBar 提供展开/收起 - RB-032 -->
     <a-card class="filter-card">
-      <a-form layout="inline">
+      <FilterBar @search="handleSearch" @reset="handleReset">
         <a-form-item label="名称">
           <a-input
             v-model:value="filters.name"
@@ -401,13 +654,28 @@ function handleSubmit() {
             style="width: 200px"
           />
         </a-form-item>
-        <a-form-item>
-          <a-space :size="8">
-            <a-button type="primary" @click="handleSearch">查询</a-button>
-            <a-button @click="handleReset">重置</a-button>
-          </a-space>
+        <!-- 分类多选：选项较多时折叠为 +N，避免撑高筛选栏 - RB-027 -->
+        <a-form-item label="分类">
+          <a-select
+            v-model:value="filters.categories"
+            mode="multiple"
+            placeholder="请选择分类"
+            allow-clear
+            max-tag-count="responsive"
+            :options="EXAMPLE_CATEGORY"
+            style="width: 200px"
+          />
         </a-form-item>
-      </a-form>
+        <!-- 创建时间范围：按天选择，起止两天均包含在内 - RB-026 -->
+        <a-form-item label="创建时间">
+          <a-range-picker
+            v-model:value="filters.createTimeRange"
+            value-format="YYYY-MM-DD"
+            :placeholder="['开始日期', '结束日期']"
+            style="width: 260px"
+          />
+        </a-form-item>
+      </FilterBar>
     </a-card>
 
     <!-- 2026-07-22 修订：顶部用 11px 抵消 Header 与 Body 的 1px 边框重叠，确保视觉间距为 10px -->
@@ -424,6 +692,7 @@ function handleSubmit() {
             <template #overlay>
               <a-menu @click="handleBatchMenu">
                 <a-menu-item key="archive">归档</a-menu-item>
+                <a-menu-item key="delete" danger>删除</a-menu-item>
               </a-menu>
             </template>
           </a-dropdown-button>
@@ -441,16 +710,12 @@ function handleSubmit() {
         :data-source="filteredList"
         :row-selection="rowSelection"
         :custom-row="customRow"
+        :row-class-name="rowClassName"
         row-key="id"
         size="middle"
-        :scroll="{ x: 720 }"
-        :pagination="{
-          defaultPageSize: 10,
-          showTotal: (total) => `共 ${total} 条数据`,
-          showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '30', '50'],
-          showQuickJumper: true,
-        }"
+        :scroll="{ x: 1160 }"
+        :pagination="tablePagination"
+        @change="handleTableChange"
       >
         <!-- 状态列：a-dropdown 包裹 Tag，排除当前状态后列出其余选项 -->
         <template #bodyCell="{ column, record }">
@@ -459,6 +724,16 @@ function handleSubmit() {
             <a class="link-cell" @click="openViewModal(record)">
               {{ record.name }}
             </a>
+          </template>
+
+          <!-- 分类列：无状态语义，纯文本回显中文名称 -->
+          <template v-else-if="column.dataIndex === 'category'">
+            {{ findEnumLabel(EXAMPLE_CATEGORY, record.category) }}
+          </template>
+
+          <!-- 所属分组列：显示完整路径，与分组列表口径一致 - FIX-003 -->
+          <template v-else-if="column.dataIndex === 'groupKey'">
+            {{ groupPathMap[record.groupKey] }}
           </template>
 
           <template v-else-if="column.dataIndex === 'status'">
@@ -501,19 +776,35 @@ function handleSubmit() {
                 size="small"
                 @click="openStandardModal(record)"
               >
-                修改
+                快速编辑
               </a-button>
+              <!-- 非草稿置灰并说明原因；禁用按钮不触发鼠标事件，需外包 span 才能显示提示，
+                   span 阻止冒泡，避免点在禁用按钮上误触发行选中 -->
+              <a-button
+                v-if="canDelete(record)"
+                type="link"
+                size="small"
+                danger
+                @click="handleDelete(record)"
+              >
+                删除
+              </a-button>
+              <a-tooltip v-else title="仅草稿记录可删除">
+                <span @click.stop>
+                  <a-button type="link" size="small" danger disabled>
+                    删除
+                  </a-button>
+                </span>
+              </a-tooltip>
             </a-space>
           </template>
         </template>
         </a-table>
-        <a-button
-          v-if="hasSelectedRows"
-          class="selection-cancel-button"
-          @click="clearSelectedRows"
-        >
-          取消选择
-        </a-button>
+        <!-- V0.x 修订：取消选择右侧显示已选条数，让用户在批量操作前确认范围 - RB-030 -->
+        <div v-if="hasSelectedRows" class="selection-bar">
+          <a-button @click="clearSelectedRows">取消选择</a-button>
+          <span class="selection-count">已选 {{ selectedRowKeys.length }} 条</span>
+        </div>
       </div>
     </a-card>
 
@@ -527,7 +818,7 @@ function handleSubmit() {
       :mask-closable="false"
       wrap-class-name="example-modal"
       :after-close="resetForm"
-      @update:open="(val) => (modalOpen = val)"
+      @update:open="handleModalOpenChange"
     >
       <div class="modal-body-scroll">
         <a-form
@@ -541,6 +832,29 @@ function handleSubmit() {
               v-model:value="formData.name"
               placeholder="请输入名称"
               :maxlength="50"
+            />
+          </a-form-item>
+
+          <!-- 每条记录只归属一个分类，表单用单选；搜索栏多选仅用于筛选 -->
+          <a-form-item label="分类" name="category" :rules="formRules.category">
+            <a-select
+              v-model:value="formData.category"
+              placeholder="请选择分类"
+              :options="EXAMPLE_CATEGORY"
+              style="width: 100%"
+            />
+          </a-form-item>
+
+          <!-- 所属分组可选区域、分部、站点任意层级，默认展开便于直接定位深层站点 - FIX-003 -->
+          <a-form-item label="所属分组" name="groupKey" :rules="formRules.groupKey">
+            <a-tree-select
+              v-model:value="formData.groupKey"
+              placeholder="请选择所属分组"
+              :tree-data="groupSelectTree"
+              :field-names="groupFieldNames"
+              tree-node-label-prop="pathLabel"
+              tree-default-expand-all
+              style="width: 100%"
             />
           </a-form-item>
 
@@ -577,15 +891,12 @@ function handleSubmit() {
     <!-- 2026-07-22 修订：标准弹窗采用 1200×600 完整框体，小视口按安全边距自动收缩 -->
     <a-modal
       :open="standardModalOpen"
-      title="修改示例记录"
+      title="快速编辑示例记录"
       width="1200px"
-      ok-text="保存"
-      cancel-text="取消"
       centered
       :mask-closable="false"
       wrap-class-name="standard-example-modal"
       :after-close="resetStandardForm"
-      @ok="handleStandardSubmit"
       @update:open="handleStandardOpenChange"
     >
       <a-form
@@ -599,6 +910,28 @@ function handleSubmit() {
             v-model:value="standardFormData.name"
             placeholder="请输入名称"
             :maxlength="50"
+          />
+        </a-form-item>
+
+        <a-form-item label="分类" name="category" :rules="formRules.category">
+          <a-select
+            v-model:value="standardFormData.category"
+            placeholder="请选择分类"
+            :options="EXAMPLE_CATEGORY"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <!-- 字段顺序与近全屏编辑弹窗一致 - FIX-003 -->
+        <a-form-item label="所属分组" name="groupKey" :rules="formRules.groupKey">
+          <a-tree-select
+            v-model:value="standardFormData.groupKey"
+            placeholder="请选择所属分组"
+            :tree-data="groupSelectTree"
+            :field-names="groupFieldNames"
+            tree-node-label-prop="pathLabel"
+            tree-default-expand-all
+            style="width: 100%"
           />
         </a-form-item>
 
@@ -620,14 +953,21 @@ function handleSubmit() {
           />
         </a-form-item>
       </a-form>
+      <!-- R2 P3-004 修订：底部操作统一放入右侧分区，与近全屏弹窗结构一致 -->
+      <template #footer>
+        <div class="modal-footer__right">
+          <a-button @click="closeStandardModal">取消</a-button>
+          <a-button type="primary" @click="handleStandardSubmit">保存</a-button>
+        </div>
+      </template>
     </a-modal>
 
-    <!-- 查看弹窗：仅 4 个只读字段，采用最小足够的默认宽度；Descriptions 只读展示，不用禁用输入框伪装 -->
+    <!-- 查看弹窗：仅少量只读字段，采用最小足够的默认宽度；Descriptions 只读展示，不用禁用输入框伪装 -->
     <a-modal
       :open="viewModalOpen"
       title="查看示例记录"
       wrap-class-name="view-example-modal"
-      @update:open="(val) => (viewModalOpen = val)"
+      @update:open="handleViewOpenChange"
     >
       <a-descriptions :column="1" bordered size="small">
         <a-descriptions-item label="编号">
@@ -635,6 +975,12 @@ function handleSubmit() {
         </a-descriptions-item>
         <a-descriptions-item label="名称">
           {{ viewingRecord?.name }}
+        </a-descriptions-item>
+        <a-descriptions-item label="分类">
+          {{ findEnumLabel(EXAMPLE_CATEGORY, viewingRecord?.category) }}
+        </a-descriptions-item>
+        <a-descriptions-item label="所属分组">
+          {{ groupPathMap[viewingRecord?.groupKey] }}
         </a-descriptions-item>
         <a-descriptions-item label="状态">
           <a-tag :color="statusColor(viewingRecord?.status)">
@@ -646,8 +992,10 @@ function handleSubmit() {
         </a-descriptions-item>
       </a-descriptions>
       <template #footer>
-        <!-- 查看弹窗无业务操作，仅保留关闭 -->
-        <a-button @click="viewModalOpen = false">关闭</a-button>
+        <!-- 查看弹窗无业务操作，仅保留关闭；R2 P3-004 修订：放入右侧分区 -->
+        <div class="modal-footer__right">
+          <a-button @click="closeViewModal">关闭</a-button>
+        </div>
       </template>
     </a-modal>
   </div>
@@ -673,11 +1021,20 @@ function handleSubmit() {
   position: relative;
 }
 
-.selection-cancel-button {
+.selection-bar {
   position: absolute;
   left: 0;
   /* 分页项高 24px、按钮高 32px，底部 12px 可使两者中心线对齐 */
   bottom: 12px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 条数为辅助信息，用次要文字色避免与按钮争夺视觉焦点 */
+.selection-count {
+  color: rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
 }
 </style>

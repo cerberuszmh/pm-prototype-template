@@ -12,6 +12,14 @@ export const EXAMPLE_STATUS = [
   { value: "archived", label: "已归档", color: "default" },
 ];
 
+// 示例分类：每条记录单选一个分类，搜索栏按多选筛选 - RB-027
+// 分类无状态语义，不定义 color，列表以纯文本回显
+export const EXAMPLE_CATEGORY = [
+  { value: "notice", label: "通知公告" },
+  { value: "activity", label: "活动资讯" },
+  { value: "policy", label: "制度文件" },
+];
+
 // 工具函数：按 value 查找枚举 label，避免在视图中散落硬编码
 // 用于 Tag / 详情态 / 列表单元格的回显
 export function findEnumLabel(enumList, value) {

@@ -130,6 +130,9 @@ const handleUserMenuClick = ({ key }) => {
           <a-menu-item key="example-list">
             <router-link to="/example/list">示例列表</router-link>
           </a-menu-item>
+          <a-menu-item key="example-group-list">
+            <router-link to="/example/group-list">分组列表</router-link>
+          </a-menu-item>
         </a-sub-menu>
       </a-menu>
 
