@@ -230,8 +230,9 @@ html.login-page-open body #app::-webkit-scrollbar {
   color: #8c8c8c;
 }
 
-.workspace-header__bell.ant-btn {
-  /* 铃铛按钮整块与顶栏（50px）等高，方形热区，悬停变底色 */
+/* 顶栏图标动作项（铃铛 / 大屏）共用统一外观：整块与顶栏（50px）等高，方形热区，悬停变底色 */
+.workspace-header__bell.ant-btn,
+.workspace-header__bigscreen.ant-btn {
   height: 50px;
   padding-inline: 12px;
   border: none;
@@ -252,17 +253,21 @@ html.login-page-open body #app::-webkit-scrollbar {
   align-items: center;
 }
 
-/* 放大铃铛图标：默认图标偏小（约 14px），有徽标数字时会被遮挡过半，
-   增大到 20px 使铃铛主体清晰、徽标只压住右上角 */
-.workspace-header__bell-icon {
+/* 放大顶栏动作项图标：AntD 图标默认随按钮字号（约 14px）偏小，
+   铃铛有徽标数字会被遮挡过半；统一放大到 20px，
+   使铃铛与大屏图标视觉重量一致、徽标只压住右上角 */
+.workspace-header__bell-icon,
+.workspace-header__bigscreen-icon {
   font-size: 20px;
 }
 
+/* 悬停浅灰底：与用户触发器一致，对齐 Ant Design Pro 顶栏动作项交互 */
 .workspace-header__bell.ant-btn:hover,
-.workspace-header__bell.ant-btn:focus-visible {
+.workspace-header__bell.ant-btn:focus-visible,
+.workspace-header__bigscreen.ant-btn:hover,
+.workspace-header__bigscreen.ant-btn:focus-visible {
   border: none;
   box-shadow: none;
-  /* 悬停浅灰底：与用户触发器一致，对齐 Ant Design Pro 顶栏动作项交互 */
   color: rgba(0, 0, 0, 0.88);
   background-color: rgba(0, 0, 0, 0.025);
 }
@@ -387,6 +392,25 @@ html.login-page-open body #app::-webkit-scrollbar {
   .ant-table-tbody > tr[class*="row-motion-"] > td {
     animation: none;
   }
+}
+
+/* ── 树形下拉整行可选 ──────────────────────────────────────────── */
+/* TreeSelect 的树节点默认只有标题文字宽度可点击，与普通下拉「整行可选」不一致；
+   让内容区占满行的剩余宽度，实现整行点击选中；
+   展开箭头区域保留展开/收起职责，标题超长时省略号截断避免撑高行 */
+.ant-select-tree .ant-select-tree-treenode {
+  width: 100%;
+}
+
+.ant-select-tree .ant-select-tree-node-content-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.ant-select-tree .ant-select-tree-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 多标签页导航（PageTabs）──────────────────────────────────── */

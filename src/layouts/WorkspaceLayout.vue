@@ -9,6 +9,8 @@ import {
   SettingOutlined,
   DoubleLeftOutlined,
   DoubleRightOutlined,
+  FundProjectionScreenOutlined,
+  SearchOutlined,
 } from "@ant-design/icons-vue";
 import PageTabs from "./PageTabs.vue";
 import NotificationPopover from "./NotificationPopover.vue";
@@ -128,6 +130,24 @@ function handleAiAssistant() {
   toggleAiPanel();
 }
 
+// V0.x 修订：顶部栏 AI 智能助手右侧新增大屏入口，仅示例无实际页面 - RB-036
+// 原型阶段不创建大屏页面，点击按占位规范只反馈成功结果
+function handleBigScreen() {
+  message.success("大屏页面打开成功");
+}
+
+// V0.x 修订：顶部栏右侧动作区新增全局搜索输入框 - RB-037
+const headerSearchValue = ref("");
+
+// 搜索为原型占位：空关键词提示补输入，非空按占位规范只反馈成功结果
+function handleHeaderSearch() {
+  if (!headerSearchValue.value.trim()) {
+    message.warning("请输入搜索关键词");
+    return;
+  }
+  message.success("搜索成功");
+}
+
 // 用户菜单复用统一退出逻辑，确保二次确认、反馈和跳转行为保持一致
 // 退出登录会结束当前会话并跳转登录页，属于高影响操作，必须二次确认，避免用户误触
 // V0.x 修订：退出登录增加二次确认对话框 - RB-009
@@ -212,7 +232,33 @@ const handleUserMenuClick = ({ key }) => {
             </span>
           </a-button>
 
+          <!-- 大屏入口：紧邻 AI 智能助手右侧，外观与铃铛动作项共用 global.css 统一规则 - RB-036 -->
+          <a-tooltip title="大屏页面">
+            <a-button
+              type="text"
+              class="workspace-header__bigscreen"
+              aria-label="大屏页面"
+              @click="handleBigScreen"
+            >
+              <!-- 图标加专属类放大到 20px，与铃铛图标视觉重量一致 -->
+              <FundProjectionScreenOutlined class="workspace-header__bigscreen-icon" />
+            </a-button>
+          </a-tooltip>
+
           <a-space :size="10" class="workspace-header__actions">
+            <!-- 全局搜索：动作区最左、先于铃铛，原型阶段仅反馈占位结果 - RB-037 -->
+            <a-input
+              v-model:value="headerSearchValue"
+              class="workspace-header__search"
+              placeholder="搜索页面、功能"
+              aria-label="搜索"
+              allow-clear
+              @press-enter="handleHeaderSearch"
+            >
+              <template #prefix>
+                <SearchOutlined />
+              </template>
+            </a-input>
             <!-- 通知中心：数字徽标 + 点击弹出三标签页浮层 -->
             <NotificationPopover />
             <a-dropdown :trigger="['click']">
@@ -328,7 +374,6 @@ const handleUserMenuClick = ({ key }) => {
   flex-shrink: 0;
   width: 168px;
   height: 34px;
-  margin-right: auto;
   padding: 0 18px;
   color: #1677ff;
   font-weight: 600;
@@ -399,6 +444,21 @@ const handleUserMenuClick = ({ key }) => {
   background-clip: text;
   -webkit-background-clip: text;
   animation: workspaceAiTextGradient 30s linear infinite;
+}
+
+/* 大屏入口只声明布局属性：外观（50px 等高、16px 图标、悬停浅灰底）
+   与铃铛动作项共用 global.css 的 .workspace-header__bell/.workspace-header__bigscreen 统一规则；
+   margin-right: auto 由 AI 按钮转移到本按钮：吸收剩余空间，
+   让大屏图标紧邻 AI 按钮，同时右侧动作区保持贴右 */
+:deep(.workspace-header__bigscreen.ant-btn) {
+  flex-shrink: 0;
+  margin-right: auto;
+}
+
+/* 顶栏搜索框：紧凑固定宽度，随动作区贴右排列；
+   前缀图标保持输入框默认尺寸，不套用图标动作项的 20px 放大口径 */
+:deep(.workspace-header__search.ant-input-affix-wrapper) {
+  width: 200px;
 }
 
 /* 每 30 秒只流动一轮：前 7 秒（7/30 ≈ 23.333%）完成流动，其余时间静止，避免持续动画干扰阅读 */

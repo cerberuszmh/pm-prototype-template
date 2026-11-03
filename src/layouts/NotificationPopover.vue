@@ -9,14 +9,19 @@ import {
 } from "@ant-design/icons-vue";
 import { notificationState, totalUnreadCount } from "../mock/notifications";
 
-// 当前激活的标签页 key
-const activeKey = ref("notification");
+// 当前激活的标签页 key：待办置首并默认选中，用户打开铃铛即看到待办
+const activeKey = ref("todo");
 
 // 徽标数字：未读总数，超过 99 显示 99+
 const totalCount = computed(() => totalUnreadCount());
 
-// 三个分组的数据与标签文案
+// 三个分组的数据与标签文案：待办第一位，其后为通知、公告
 const tabItems = [
+  {
+    key: "todo",
+    label: "待办",
+    list: notificationState.todos,
+  },
   {
     key: "notification",
     label: "通知",
@@ -26,11 +31,6 @@ const tabItems = [
     key: "announcement",
     label: "公告",
     list: notificationState.announcements,
-  },
-  {
-    key: "todo",
-    label: "待办",
-    list: notificationState.todos,
   },
 ];
 
@@ -77,7 +77,7 @@ function handleSeeMore() {
     overlay-class-name="notification-popover"
   >
     <template #content>
-      <!-- 三个分组标签页：通知、公告、待办 -->
+      <!-- 三个分组标签页：待办、通知、公告 -->
       <a-tabs v-model:active-key="activeKey" centered class="notification-popover__tabs">
         <a-tab-pane
           v-for="tab in tabItems"
@@ -154,21 +154,24 @@ function handleSeeMore() {
     </template>
 
     <!-- 触发器：铃铛按钮整块与顶栏等高，悬停变浅灰底；
+         外层 tooltip 与内层 popover 分工：悬停显示「通知中心」气泡（与大屏图标口径一致），点击打开消息浮层；
          徽标改为包裹图标，使数字贴在铃铛右上角而非按钮顶部 -->
-    <a-button
-      type="text"
-      class="workspace-header__bell"
-      aria-label="通知中心"
-    >
-      <a-badge
-        :count="totalCount"
-        :overflow-count="99"
-        :show-zero="false"
-        class="workspace-header__notice"
+    <a-tooltip title="通知中心">
+      <a-button
+        type="text"
+        class="workspace-header__bell"
+        aria-label="通知中心"
       >
-        <BellOutlined class="workspace-header__bell-icon" />
-      </a-badge>
-    </a-button>
+        <a-badge
+          :count="totalCount"
+          :overflow-count="99"
+          :show-zero="false"
+          class="workspace-header__notice"
+        >
+          <BellOutlined class="workspace-header__bell-icon" />
+        </a-badge>
+      </a-button>
+    </a-tooltip>
   </a-popover>
 </template>
 
