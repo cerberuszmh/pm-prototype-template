@@ -15,6 +15,8 @@ const PlaceholderView = () => import("../views/PlaceholderView.vue");
 const ExampleListView = () => import("../views/example/ExampleListView.vue");
 const ExampleGroupListView = () =>
   import("../views/example/ExampleGroupListView.vue");
+// 工作台是模板示例页，与系统首页分开，避免首页占位被示例聚合内容替换
+const WorkbenchView = () => import("../views/workbench/WorkbenchView.vue");
 
 // 辅助函数：快速生成占位路由，新模块未实现前先用占位页占位
 // path / key / title / group / parentTitle 五项与左侧菜单的 key 与展示文案一致
@@ -53,6 +55,18 @@ const routes = [
           title: "系统首页",
           description: "系统后台首页。",
           menuKey: "home",
+        },
+      },
+
+      // 工作台示例：保留系统首页，单独提供样式与示例记录聚合参考
+      {
+        path: "workbench",
+        name: "workbench",
+        component: WorkbenchView,
+        meta: {
+          title: "工作台",
+          description: "模板示例工作台，聚合示例记录的指标、待办、入口和动态。",
+          menuKey: "workbench",
         },
       },
 

@@ -11,6 +11,7 @@ import {
   DoubleRightOutlined,
   FundProjectionScreenOutlined,
   SearchOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons-vue";
 import PageTabs from "./PageTabs.vue";
 import NotificationPopover from "./NotificationPopover.vue";
@@ -20,6 +21,7 @@ import AiAssistantPanel from "./AiAssistantPanel.vue";
 import { useOpenedTabs } from "../composables/useOpenedTabs";
 import { useAiAssistant } from "../composables/useAiAssistant";
 import { appConfig } from "../config/app";
+import { NAVIGABLE_ROUTE_NAMES, SIDE_MENU_ROUTE_TREE } from "../config/sideMenu";
 
 // 共享刷新计数器，与 PageTabs 通过 useOpenedTabs 模块单例同源
 // 计数器自增时，下方 RouterView 的 :key 变化触发组件 remount，等同于浏览器刷新当前 tab
@@ -44,16 +46,47 @@ function getSideMenuItem(label, key, icon, children) {
   };
 }
 
-// 菜单 item.key 与 vue-router 的 route.name 一致；新模块追加时同步改 router 与 ROUTE_MENU_KEYS
-const sideMenuItems = reactive([
-  getSideMenuItem("系统首页", "home", () => h(HomeOutlined)),
-  getSideMenuItem("示例模块", "grp-example", () => h(AppstoreOutlined), [
-    getSideMenuItem("示例列表", "example-list"),
-    getSideMenuItem("分组列表", "example-group-list"),
-  ]),
-]);
+/** 分组与子页图标：与 SIDE_MENU_ROUTE_TREE 分组 key 对应 */
+const sideMenuGroupIcons = {
+  "grp-example": () => h(AppstoreOutlined),
+};
 
-const ROUTE_MENU_KEYS = new Set(["home", "example-list", "example-group-list"]);
+const sideMenuLeafIcons = {
+  home: () => h(HomeOutlined),
+  workbench: () => h(DashboardOutlined),
+};
+
+function buildSideMenuItemsFromConfig() {
+  const items = [];
+  for (const node of SIDE_MENU_ROUTE_TREE) {
+    if (node.children) {
+      items.push(
+        getSideMenuItem(
+          node.label,
+          node.groupKey,
+          sideMenuGroupIcons[node.groupKey],
+          node.children.map((child) => {
+            return getSideMenuItem(child.label, child.routeName);
+          })
+        )
+      );
+      continue;
+    }
+    items.push(
+      getSideMenuItem(
+        node.label,
+        node.routeName,
+        sideMenuLeafIcons[node.routeName]
+      )
+    );
+  }
+  return items;
+}
+
+// 菜单 item.key 与 vue-router 的 route.name 一致；结构来自 config/sideMenu.js
+const sideMenuItems = reactive(buildSideMenuItemsFromConfig());
+
+const ROUTE_MENU_KEYS = NAVIGABLE_ROUTE_NAMES;
 
 const selectedKeys = ref(["home"]);
 const openKeys = ref([]);

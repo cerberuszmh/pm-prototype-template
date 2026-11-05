@@ -14,6 +14,7 @@ export const notificationState = reactive({
       title: "系统通知",
       description: "您的账号密码即将过期，请及时修改",
       time: "10分钟前",
+      read: false,
     },
     {
       id: "N-002",
@@ -21,6 +22,7 @@ export const notificationState = reactive({
       title: "审核提醒",
       description: "您提交的示例申请已通过审核",
       time: "1小时前",
+      read: false,
     },
     {
       id: "N-003",
@@ -28,6 +30,7 @@ export const notificationState = reactive({
       title: "评论回复",
       description: "管理员回复了您的留言",
       time: "2小时前",
+      read: false,
     },
   ],
 
@@ -39,6 +42,7 @@ export const notificationState = reactive({
       title: "系统升级公告",
       description: "本周六凌晨 02:00 进行系统维护",
       time: "昨天",
+      read: false,
     },
     {
       id: "A-002",
@@ -46,10 +50,11 @@ export const notificationState = reactive({
       title: "功能上线",
       description: "新增导出报表功能，欢迎使用",
       time: "3天前",
+      read: false,
     },
   ],
 
-  // 待办：需要用户处理的任务
+  // 待办：需要用户处理的任务（无「全部已读」，不提供清空）
   todos: [
     {
       id: "T-001",
@@ -68,11 +73,51 @@ export const notificationState = reactive({
   ],
 });
 
-// 计算三个分组中消息总数，用于徽标数字（原型中所有消息均视为未读）
+export function unreadCountInList(list) {
+  let count = 0;
+  for (const item of list) {
+    if (!item.read) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+// 全部已读：出场动画结束后从列表移除未读条目（卡片与铃铛不再展示）
+function removeUnreadFromList(list) {
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    if (!list[index].read) {
+      list.splice(index, 1);
+    }
+  }
+}
+
+export function markAllNotificationsRead() {
+  removeUnreadFromList(notificationState.notifications);
+}
+
+export function markAllAnnouncementsRead() {
+  removeUnreadFromList(notificationState.announcements);
+}
+
+// 顶栏徽标：通知/公告条数 + 待办条数（列表中均为未读）
 export function totalUnreadCount() {
-  return [
-    ...notificationState.notifications,
-    ...notificationState.announcements,
-    ...notificationState.todos,
-  ].length;
+  return (
+    notificationState.notifications.length +
+    notificationState.announcements.length +
+    notificationState.todos.length
+  );
+}
+
+export function tabBadgeCount(tabKey) {
+  if (tabKey === "todo") {
+    return notificationState.todos.length;
+  }
+  if (tabKey === "notification") {
+    return notificationState.notifications.length;
+  }
+  if (tabKey === "announcement") {
+    return notificationState.announcements.length;
+  }
+  return 0;
 }

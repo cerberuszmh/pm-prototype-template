@@ -1,16 +1,24 @@
 <script setup>
 import { computed, ref } from "vue";
 import { message } from "ant-design-vue";
+import { BellOutlined } from "@ant-design/icons-vue";
 import {
-  BellOutlined,
-  CheckSquareOutlined,
-  MailOutlined,
-  SoundOutlined,
-} from "@ant-design/icons-vue";
-import { notificationState, totalUnreadCount } from "../mock/notifications";
+  markAllAnnouncementsRead,
+  markAllNotificationsRead,
+  notificationState,
+  tabBadgeCount,
+  totalUnreadCount,
+} from "../mock/notifications";
+import {
+  notificationTypeColors,
+  notificationTypeIcons,
+} from "../mock/notificationCenterMeta";
+import { useNotificationItemMotion } from "../composables/useNotificationItemMotion";
 
 // 当前激活的标签页 key：待办置首并默认选中，用户打开铃铛即看到待办
 const activeKey = ref("todo");
+
+const { playMarkAllRead, itemMotionClass } = useNotificationItemMotion();
 
 // 徽标数字：未读总数，超过 99 显示 99+
 const totalCount = computed(() => totalUnreadCount());
@@ -34,34 +42,54 @@ const tabItems = [
   },
 ];
 
-// 当前激活标签页的文案，用于底部按钮和空态提示
-const currentTabLabel = computed(() => {
-  return tabItems.find((tab) => tab.key === activeKey.value)?.label ?? "消息";
+const showMarkAllRead = computed(() => {
+  return activeKey.value === "notification" || activeKey.value === "announcement";
 });
 
-// 按消息类型映射图标与颜色，保持三个分组视觉区分
-const iconMap = {
-  message: MailOutlined,
-  system: BellOutlined,
-  announcement: SoundOutlined,
-  todo: CheckSquareOutlined,
-};
+const markAllReadDisabled = computed(() => {
+  if (activeKey.value === "notification") {
+    return notificationState.notifications.length === 0;
+  }
+  if (activeKey.value === "announcement") {
+    return notificationState.announcements.length === 0;
+  }
+  return true;
+});
 
-const colorMap = {
-  message: "#1677ff",
-  system: "#ff4d4f",
-  announcement: "#722ed1",
-  todo: "#52c41a",
-};
+function getActivePopoverPaneEl() {
+  const popoverRoot = document.querySelector(".notification-popover");
+  if (!popoverRoot) {
+    return null;
+  }
+  const pane = popoverRoot.querySelector(".ant-tabs-tabpane-active");
+  if (!pane) {
+    return null;
+  }
+  return pane.querySelector(".notification-popover__pane-body");
+}
 
-// 清空当前标签页：移除当前列表所有项，并给出反馈
-function handleClear() {
-  const currentTab = tabItems.find((tab) => tab.key === activeKey.value);
-  if (!currentTab) {
+function handleMarkAllRead() {
+  if (activeKey.value === "notification") {
+    playMarkAllRead(
+      notificationState.notifications,
+      () => {
+        markAllNotificationsRead();
+        message.success("通知已全部标记为已读");
+      },
+      getActivePopoverPaneEl
+    );
     return;
   }
-  currentTab.list.length = 0;
-  message.success(`已清空${currentTabLabel.value}`);
+  if (activeKey.value === "announcement") {
+    playMarkAllRead(
+      notificationState.announcements,
+      () => {
+        markAllAnnouncementsRead();
+        message.success("公告已全部标记为已读");
+      },
+      getActivePopoverPaneEl
+    );
+  }
 }
 
 // 查看更多：占位入口，按规范仅反馈成功结果
@@ -87,42 +115,45 @@ function handleSeeMore() {
             <span class="notification-popover__tab-label">
               {{ tab.label }}
               <a-badge
-                :count="tab.list.length"
+                :count="tabBadgeCount(tab.key)"
                 :show-zero="false"
                 class="notification-popover__tab-badge"
               />
             </span>
           </template>
-          <!-- 列表为空时展示统一空态 -->
-          <div
-            v-if="tab.list.length === 0"
-            class="notification-popover__empty"
-          >
-            暂无{{ tab.label }}
-          </div>
-
-          <!-- 消息列表：图标 + 标题 + 描述 + 时间 -->
-          <div v-else class="notification-popover__list">
+          <div class="notification-popover__pane-body">
+            <!-- 列表为空时展示统一空态 -->
             <div
-              v-for="item in tab.list"
-              :key="item.id"
-              class="notification-popover__item"
+              v-if="tab.list.length === 0"
+              class="notification-popover__empty"
             >
+              暂无{{ tab.label }}
+            </div>
+
+            <!-- 消息列表：图标 + 标题 + 描述 + 时间 -->
+            <div v-else class="notification-popover__list">
               <div
-                class="notification-popover__item-icon"
-                :style="{ backgroundColor: colorMap[item.type] }"
+                v-for="item in tab.list"
+                :key="item.id"
+                class="notification-popover__item"
+                :class="itemMotionClass(item.id)"
               >
-                <component :is="iconMap[item.type]" />
-              </div>
-              <div class="notification-popover__item-content">
-                <div class="notification-popover__item-title">
-                  {{ item.title }}
+                <div
+                  class="notification-popover__item-icon"
+                  :style="{ backgroundColor: notificationTypeColors[item.type] }"
+                >
+                  <component :is="notificationTypeIcons[item.type]" />
                 </div>
-                <div class="notification-popover__item-desc">
-                  {{ item.description }}
-                </div>
-                <div class="notification-popover__item-time">
-                  {{ item.time }}
+                <div class="notification-popover__item-content">
+                  <div class="notification-popover__item-title">
+                    {{ item.title }}
+                  </div>
+                  <div class="notification-popover__item-desc">
+                    {{ item.description }}
+                  </div>
+                  <div class="notification-popover__item-time">
+                    {{ item.time }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -130,16 +161,21 @@ function handleSeeMore() {
         </a-tab-pane>
       </a-tabs>
 
-      <!-- 底部操作：清空当前分组 / 查看更多，等宽分两栏，中间 1px 分隔线 -->
-      <div class="notification-popover__footer">
+      <!-- 底部操作：通知/公告左侧为全部已读，待办无左侧按钮；右侧始终为查看更多 -->
+      <div
+        class="notification-popover__footer"
+        :class="{ 'notification-popover__footer--single': !showMarkAllRead }"
+      >
         <div
+          v-if="showMarkAllRead"
           role="button"
           tabindex="0"
           class="notification-popover__footer-btn"
-          @click="handleClear"
-          @keydown.enter="handleClear"
+          :class="{ 'is-disabled': markAllReadDisabled }"
+          @click="handleMarkAllRead"
+          @keydown.enter="handleMarkAllRead"
         >
-          清空{{ currentTabLabel }}
+          全部已读
         </div>
         <div
           role="button"
@@ -304,6 +340,11 @@ function handleSeeMore() {
   border-top: 1px solid #f0f0f0;
 }
 
+.notification-popover__footer--single .notification-popover__footer-btn {
+  flex: 1;
+  border-right: none;
+}
+
 .notification-popover__footer-btn {
   flex: 1;
   display: flex;
@@ -323,8 +364,13 @@ function handleSeeMore() {
   border-right: 1px solid #f0f0f0;
 }
 
-.notification-popover__footer-btn:hover,
-.notification-popover__footer-btn:focus-visible {
+.notification-popover__footer-btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notification-popover__footer-btn:not(.is-disabled):hover,
+.notification-popover__footer-btn:not(.is-disabled):focus-visible {
   background-color: rgba(0, 0, 0, 0.02);
 }
 </style>

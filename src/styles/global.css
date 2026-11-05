@@ -394,6 +394,163 @@ html.login-page-open body #app::-webkit-scrollbar {
   }
 }
 
+/* 通知中心 / 工作台：全部已读时未读条目出场，复用 rowMotionLeave */
+.workbench-unified-feed__item.notification-item-motion-leave,
+.notification-center-feed__item.notification-item-motion-leave,
+.notification-popover__item.notification-item-motion-leave {
+  animation: rowMotionLeave 500ms ease-in-out forwards;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workbench-unified-feed__item.notification-item-motion-leave,
+  .notification-center-feed__item.notification-item-motion-leave,
+  .notification-popover__item.notification-item-motion-leave {
+    animation: none;
+  }
+}
+
+/* 工作台待办 / 通知 / 公告列表：统一行高与字号 */
+.workbench-unified-feed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+
+.workbench-unified-feed__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.workbench-unified-feed__item:last-child {
+  border-bottom: none;
+}
+
+.workbench-unified-feed__item:not(.is-disabled) {
+  cursor: pointer;
+}
+
+.workbench-unified-feed__item:not(.is-disabled):hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.workbench-unified-feed__item.is-disabled {
+  cursor: default;
+}
+
+.workbench-unified-feed__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 14px;
+}
+
+.workbench-unified-feed__body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.workbench-unified-feed__rail {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 48px;
+  max-width: 88px;
+  padding-left: 8px;
+}
+
+.workbench-unified-feed__title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workbench-unified-feed__title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.workbench-unified-feed__tag {
+  margin-inline-end: 0;
+}
+
+.workbench-unified-feed__desc {
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.workbench-unified-feed__time {
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: right;
+}
+
+.workbench-unified-feed__action-hint {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #1677ff;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* 右侧窄栏「最近动态」：两行紧凑，避免长文案与日期换行错位 */
+.workbench-unified-feed--activity .workbench-unified-feed__item--activity {
+  align-items: flex-start;
+  min-height: 52px;
+  padding: 10px 0;
+}
+
+.workbench-unified-feed--activity .workbench-unified-feed__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-unified-feed__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  min-width: 0;
+}
+
+.workbench-unified-feed__time-inline {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: right;
+}
+
 /* ── 树形下拉整行可选 ──────────────────────────────────────────── */
 /* TreeSelect 的树节点默认只有标题文字宽度可点击，与普通下拉「整行可选」不一致；
    让内容区占满行的剩余宽度，实现整行点击选中；
@@ -624,6 +781,7 @@ body .ant-image-preview-root .ant-image-preview-wrap {
   right: 20px;
 }
 
+/* 工作台添加快捷入口：单字段小窗，框体语言与 view-example-modal 一致（见 WorkbenchView） */
 /* 查看弹窗：只读小弹窗，内容少不需要滚动分区，但标题/底部分隔线与边距 */
 /* 必须与编辑、快速编辑弹窗保持一致，避免同页弹窗框体语言不统一 */
 .view-example-modal .ant-modal-content {
