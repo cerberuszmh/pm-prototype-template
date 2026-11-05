@@ -101,7 +101,9 @@ function handleSeeMore() {
 <template>
   <a-popover
     placement="bottomRight"
-    trigger="click"
+    trigger="hover"
+    :mouse-enter-delay="0.12"
+    :mouse-leave-delay="0.18"
     overlay-class-name="notification-popover"
   >
     <template #content>
@@ -189,25 +191,21 @@ function handleSeeMore() {
       </div>
     </template>
 
-    <!-- 触发器：铃铛按钮整块与顶栏等高，悬停变浅灰底；
-         外层 tooltip 与内层 popover 分工：悬停显示「通知中心」气泡（与大屏图标口径一致），点击打开消息浮层；
-         徽标改为包裹图标，使数字贴在铃铛右上角而非按钮顶部 -->
-    <a-tooltip title="通知中心">
-      <a-button
-        type="text"
-        class="workspace-header__bell"
-        aria-label="通知中心"
+    <!-- 触发器：悬停展开浮层；不再套 tooltip，避免与 popover 的 hover 抢焦点 -->
+    <a-button
+      type="text"
+      class="workspace-header__bell"
+      aria-label="通知中心"
+    >
+      <a-badge
+        :count="totalCount"
+        :overflow-count="99"
+        :show-zero="false"
+        class="workspace-header__notice"
       >
-        <a-badge
-          :count="totalCount"
-          :overflow-count="99"
-          :show-zero="false"
-          class="workspace-header__notice"
-        >
-          <BellOutlined class="workspace-header__bell-icon" />
-        </a-badge>
-      </a-button>
-    </a-tooltip>
+        <BellOutlined class="workspace-header__bell-icon" />
+      </a-badge>
+    </a-button>
   </a-popover>
 </template>
 

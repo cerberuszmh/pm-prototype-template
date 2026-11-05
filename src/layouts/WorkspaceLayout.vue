@@ -292,9 +292,9 @@ const handleUserMenuClick = ({ key }) => {
                 <SearchOutlined />
               </template>
             </a-input>
-            <!-- 通知中心：数字徽标 + 点击弹出三标签页浮层 -->
+            <!-- 通知中心：数字徽标 + 悬停展开三标签页浮层 -->
             <NotificationPopover />
-            <a-dropdown :trigger="['click']">
+            <a-dropdown :trigger="['hover']">
               <a-space :size="6" class="workspace-user-trigger">
                 <a-avatar :size="26" style="background-color: #1677ff" />
                 <span class="workspace-user-trigger__name">管理员</span>
