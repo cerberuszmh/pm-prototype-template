@@ -48,16 +48,28 @@ function buildGroupSelectTree(nodes) {
 }
 const groupSelectTree = buildGroupSelectTree(exampleGroupTree);
 
+// 新建 / 编辑 / 快速编辑：所属分组下拉支持输入关键字过滤，匹配节点名称或完整路径
+function filterGroupTreeNode(inputValue, treeNode) {
+  const keyword = String(inputValue || "").trim().toLowerCase();
+  if (!keyword) {
+    return true;
+  }
+  const node = treeNode.dataRef || treeNode;
+  const title = String(node.title || "").toLowerCase();
+  const pathLabel = String(node.pathLabel || "").toLowerCase();
+  return title.includes(keyword) || pathLabel.includes(keyword);
+}
+
 // ──────────────────────────────────────────────────────────────
 // 筛选状态：搜索栏字段
 // ──────────────────────────────────────────────────────────────
 // V0.x 修订：新增创建时间范围筛选，按天选择 - RB-026
 // createTimeRange 为 ["YYYY-MM-DD", "YYYY-MM-DD"]，未选择时为 undefined
-// V0.x 修订：新增分类多选筛选，categories 为分类 value 数组 - RB-027
+// V0.x 修订：分类筛选为单选下拉，与状态控件一致 - RB-039（原多选改为单选）
 const filters = reactive({
   name: "",
   status: undefined,
-  categories: [],
+  category: undefined,
   createTimeRange: undefined,
 });
 
@@ -65,16 +77,15 @@ const filters = reactive({
 const appliedFilters = reactive({
   name: "",
   status: undefined,
-  categories: [],
+  category: undefined,
   createTimeRange: undefined,
 });
 
 // 查询时才提交筛选条件，让按钮承担明确的查询触发职责
-// 分类数组复制一份再提交，避免编辑态后续增删选项时联动改变已提交态
 function handleSearch() {
   appliedFilters.name = filters.name.trim();
   appliedFilters.status = filters.status;
-  appliedFilters.categories = [...filters.categories];
+  appliedFilters.category = filters.category;
   appliedFilters.createTimeRange = filters.createTimeRange;
   resetListView();
 }
@@ -83,11 +94,11 @@ function handleSearch() {
 function handleReset() {
   filters.name = "";
   filters.status = undefined;
-  filters.categories = [];
+  filters.category = undefined;
   filters.createTimeRange = undefined;
   appliedFilters.name = "";
   appliedFilters.status = undefined;
-  appliedFilters.categories = [];
+  appliedFilters.category = undefined;
   appliedFilters.createTimeRange = undefined;
   resetListView();
 }
@@ -97,15 +108,6 @@ function handleReset() {
 function resetListView() {
   pagination.current = 1;
   clearSelectedRows();
-}
-
-// 多选筛选为"命中任一即显示"；未选择任何分类视为不筛选
-function matchCategories(category) {
-  const selected = appliedFilters.categories;
-  if (selected.length === 0) {
-    return true;
-  }
-  return selected.includes(category);
 }
 
 // 按天筛选需包含起止两天整天，故只取 createTime 的日期部分比较；
@@ -135,7 +137,9 @@ const filteredList = computed(() => {
     const matchStatus = appliedFilters.status
       ? item.status === appliedFilters.status
       : true;
-    const matchCategory = matchCategories(item.category);
+    const matchCategory = appliedFilters.category
+      ? item.category === appliedFilters.category
+      : true;
     const matchTime = matchCreateTimeRange(item.createTime);
     return matchName && matchStatus && matchCategory && matchTime;
   });
@@ -654,14 +658,12 @@ function handleSubmit() {
             style="width: 200px"
           />
         </a-form-item>
-        <!-- 分类多选：选项较多时折叠为 +N，避免撑高筛选栏 - RB-027 -->
+        <!-- 分类：普通单选下拉，口径与状态筛选一致 - RB-039 -->
         <a-form-item label="分类">
           <a-select
-            v-model:value="filters.categories"
-            mode="multiple"
+            v-model:value="filters.category"
             placeholder="请选择分类"
             allow-clear
-            max-tag-count="responsive"
             :options="EXAMPLE_CATEGORY"
             style="width: 200px"
           />
@@ -835,7 +837,7 @@ function handleSubmit() {
             />
           </a-form-item>
 
-          <!-- 每条记录只归属一个分类，表单用单选；搜索栏多选仅用于筛选 -->
+          <!-- 每条记录只归属一个分类；搜索栏与表单均为单选下拉 -->
           <a-form-item label="分类" name="category" :rules="formRules.category">
             <a-select
               v-model:value="formData.category"
@@ -850,6 +852,8 @@ function handleSubmit() {
             <a-tree-select
               v-model:value="formData.groupKey"
               placeholder="请选择所属分组"
+              show-search
+              :filter-tree-node="filterGroupTreeNode"
               :tree-data="groupSelectTree"
               :field-names="groupFieldNames"
               tree-node-label-prop="pathLabel"
@@ -927,6 +931,8 @@ function handleSubmit() {
           <a-tree-select
             v-model:value="standardFormData.groupKey"
             placeholder="请选择所属分组"
+            show-search
+            :filter-tree-node="filterGroupTreeNode"
             :tree-data="groupSelectTree"
             :field-names="groupFieldNames"
             tree-node-label-prop="pathLabel"

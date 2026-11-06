@@ -74,49 +74,113 @@ html.login-page-open body #app::-webkit-scrollbar {
 .workspace-layout {
   position: fixed;
   inset: 0;
+  display: flex;
+  flex-direction: column;
   background: #f5f7fa;
-  /* 桌面端锁定工作台视口，左右区域各自承担滚动，避免菜单被右侧内容带动 */
   overflow: hidden;
 }
 
+/* 侧栏浅色底：自通栏 Header 下方铺满左侧，宽度随收起态变化 */
 .workspace-layout::before {
   content: "";
   position: fixed;
   left: 0;
-  top: 0;
+  top: 50px;
   bottom: 0;
   width: 248px;
-  background: #001529;
+  background: #ffffff;
+  /* 分隔线只由 .workspace-sider 绘制，避免与菜单右边框叠成双线 */
   pointer-events: none;
   z-index: 0;
   transition: width 0.2s;
 }
 
-/* 侧边栏收起时，固定背景宽度同步收缩，避免露出多余暗色背景 */
 .workspace-layout.is-collapsed::before {
   width: 48px;
 }
 
-.workspace-layout > .ant-layout {
-  height: 100%;
+/* 通栏 Header 置于最上层，不参与下方 body 的横向 flex */
+.workspace-layout > .ant-layout-header.workspace-header {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+/* Header 下方：左侧菜单 + 右侧标签与内容 */
+.workspace-layout > .workspace-body.ant-layout {
+  flex: 1;
+  min-height: 0;
   min-width: 0;
-  background: #f5f7fa;
-  /* 右侧整体不滚动：顶部栏固定，滚动交给内部内容区，避免顶部栏计入滚动高度产生幽灵滚动条 */
+  display: flex;
+  flex-direction: row;
+  background: transparent;
+  overflow: hidden;
+}
+
+.workspace-body > .workspace-main.ant-layout {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  background: #f5f7fa;
   overflow: hidden;
+}
+
+/* 顶栏品牌区：深色通栏上的系统名，与下方浅色侧栏菜单分离 */
+.workspace-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  max-width: 240px;
+  margin-right: 8px;
+  overflow: hidden;
+}
+
+.workspace-header__brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--workspace-header-icon-hover);
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.workspace-header__brand-icon .anticon {
+  color: inherit;
+}
+
+.workspace-header__brand-title {
+  flex: 1;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 兼容旧类名：侧栏内品牌区已迁移至通栏 Header，保留选择器避免历史样式引用报错 */
+.workspace-brand {
+  display: none;
 }
 
 /* 提高选择器权重，覆盖 Ant Design .ant-layout-sider 默认的 position: relative */
 .ant-layout-sider.workspace-sider {
-  position: sticky;
-  top: 0;
+  position: relative;
+  z-index: 1;
   height: 100%;
   overflow: auto;
-  background: #001529;
-  z-index: 1;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE / Edge */
+  background: #ffffff;
+  border-right: 1px solid #f0f0f0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .workspace-sider::-webkit-scrollbar {
@@ -125,75 +189,44 @@ html.login-page-open body #app::-webkit-scrollbar {
 
 .workspace-sider .ant-layout-sider-children {
   min-height: 100%;
-  background: #001529;
-}
-
-.workspace-brand {
+  background: #ffffff;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 50px;
-  padding: 0 20px;
-  overflow: hidden;
+  flex-direction: column;
 }
 
-/* 占位系统图标：与标题同行，收起时单独居中 */
-.workspace-brand__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  color: #ffffff;
-  font-size: 20px;
-}
-
-.workspace-brand__title {
+/* 内联菜单默认自带右边框，与 Sider 外框叠在一起会使菜单段比底部折叠栏多 1px 线 */
+.ant-layout-sider.workspace-sider .workspace-sider__menu.ant-menu {
   flex: 1;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 侧边栏收起时隐藏标题文字，仅显示居中图标 */
-.workspace-brand.is-collapsed {
-  justify-content: center;
-  padding: 0;
-}
-
-.workspace-brand.is-collapsed .workspace-brand__title {
-  display: none;
-}
-
-.workspace-brand__desc {
-  margin: 8px 0 0;
-  color: rgba(255, 255, 255, 0.72);
-  line-height: 1.6;
+  min-height: 0;
+  width: 100%;
+  border-inline-end: none;
+  border-right: none;
 }
 
 /* 提高选择器权重，覆盖 Ant Design .ant-layout-header 默认的 0 50px 内边距 */
 .ant-layout-header.workspace-header {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 16px;
   min-height: 50px;
   height: 50px;
   padding: 0 20px;
   line-height: 50px;
-  background: #ffffff !important;
-  border-bottom: 1px solid #f0f0f0;
+  background: #001529 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
+  /* 深色通栏图标色：默认略透、悬停纯白，动作区统一引用 */
+  --workspace-header-icon: rgba(255, 255, 255, 0.85);
+  --workspace-header-icon-hover: #ffffff;
+  --workspace-header-icon-muted: rgba(255, 255, 255, 0.55);
 }
 
 .workspace-header__actions {
   display: flex;
   align-items: center;
   max-width: 100%;
+  margin-left: auto;
   justify-content: flex-end;
   line-height: 1;
 }
@@ -205,18 +238,17 @@ html.login-page-open body #app::-webkit-scrollbar {
 }
 
 .workspace-user-trigger {
-  /* 与 Ant Design Pro 顶栏动作项一致：整块与顶栏（50px）等高，悬停浅灰底 */
+  /* 深色通栏动作项：整块与顶栏（50px）等高，悬停半透明白底 */
   height: 50px;
   padding: 0 12px;
   cursor: pointer;
-  color: #1f1f1f;
+  color: rgba(255, 255, 255, 0.92);
   line-height: 1;
   transition: background-color 0.2s;
 }
 
-/* 悬停高亮：与铃铛按钮采用同一底色，保证右上角动作项视觉统一 */
 .workspace-user-trigger:hover {
-  background-color: rgba(0, 0, 0, 0.025);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .workspace-user-trigger__name {
@@ -227,12 +259,12 @@ html.login-page-open body #app::-webkit-scrollbar {
 
 .workspace-user-trigger__arrow {
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--workspace-header-icon-muted);
 }
 
 /* 顶栏图标动作项（铃铛 / 大屏）共用统一外观：整块与顶栏（50px）等高，方形热区，悬停变底色 */
-.workspace-header__bell.ant-btn,
-.workspace-header__bigscreen.ant-btn {
+.ant-layout-header.workspace-header .workspace-header__bell.ant-btn,
+.ant-layout-header.workspace-header .workspace-header__bigscreen.ant-btn {
   height: 50px;
   padding-inline: 12px;
   border: none;
@@ -243,8 +275,8 @@ html.login-page-open body #app::-webkit-scrollbar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.65);
-  transition: background-color 0.2s;
+  color: var(--workspace-header-icon);
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* 徽标包裹铃铛图标，内联居中，使未读数贴在图标右上角 */
@@ -259,17 +291,104 @@ html.login-page-open body #app::-webkit-scrollbar {
 .workspace-header__bell-icon,
 .workspace-header__bigscreen-icon {
   font-size: 20px;
+  color: inherit;
 }
 
-/* 悬停浅灰底：与用户触发器一致，对齐 Ant Design Pro 顶栏动作项交互 */
-.workspace-header__bell.ant-btn:hover,
-.workspace-header__bell.ant-btn:focus-visible,
-.workspace-header__bigscreen.ant-btn:hover,
-.workspace-header__bigscreen.ant-btn:focus-visible {
+/* AntD 图标组件常自带深色，需继承按钮上的通栏浅色 */
+.ant-layout-header.workspace-header .workspace-header__bell .anticon,
+.ant-layout-header.workspace-header .workspace-header__bigscreen .anticon {
+  color: inherit;
+}
+
+/* 铃铛外包 Badge + text 按钮自带深色字色，需显式覆盖图标 */
+.ant-layout-header.workspace-header .workspace-header__bell.ant-btn-text {
+  color: var(--workspace-header-icon);
+}
+
+.ant-layout-header.workspace-header
+  .workspace-header__bell
+  .workspace-header__bell-icon.anticon,
+.ant-layout-header.workspace-header
+  .workspace-header__bell
+  .workspace-header__notice
+  .anticon {
+  color: var(--workspace-header-icon);
+}
+
+.ant-layout-header.workspace-header .workspace-header__bigscreen.ant-btn-text {
+  color: var(--workspace-header-icon);
+}
+
+.ant-layout-header.workspace-header .workspace-header__bell.ant-btn:hover,
+.ant-layout-header.workspace-header .workspace-header__bell.ant-btn:focus-visible,
+.ant-layout-header.workspace-header .workspace-header__bigscreen.ant-btn:hover,
+.ant-layout-header.workspace-header .workspace-header__bigscreen.ant-btn:focus-visible {
   border: none;
   box-shadow: none;
-  color: rgba(0, 0, 0, 0.88);
-  background-color: rgba(0, 0, 0, 0.025);
+  color: var(--workspace-header-icon-hover);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.ant-layout-header.workspace-header .workspace-header__bell.ant-btn:hover
+  .workspace-header__bell-icon.anticon,
+.ant-layout-header.workspace-header
+  .workspace-header__bell.ant-btn:focus-visible
+  .workspace-header__bell-icon.anticon,
+.ant-layout-header.workspace-header
+  .workspace-header__bell.ant-btn-text:not(:disabled):hover
+  .anticon {
+  color: var(--workspace-header-icon-hover);
+}
+
+.ant-layout-header.workspace-header
+  .workspace-header__bigscreen.ant-btn:hover
+  .anticon,
+.ant-layout-header.workspace-header
+  .workspace-header__bigscreen.ant-btn:focus-visible
+  .anticon {
+  color: var(--workspace-header-icon-hover);
+}
+
+.ant-layout-header.workspace-header .workspace-user-trigger .anticon {
+  color: var(--workspace-header-icon-muted);
+}
+
+/* 深色通栏内的紧凑搜索框：半透明白底，文字与占位符浅色 */
+.ant-layout-header.workspace-header .workspace-header__search.ant-input-affix-wrapper {
+  width: 200px;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: transparent;
+}
+
+.ant-layout-header.workspace-header
+  .workspace-header__search.ant-input-affix-wrapper:hover,
+.ant-layout-header.workspace-header
+  .workspace-header__search.ant-input-affix-wrapper-focused {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: transparent;
+}
+
+.ant-layout-header.workspace-header .workspace-header__search input.ant-input {
+  color: rgba(255, 255, 255, 0.92);
+  background: transparent;
+}
+
+.ant-layout-header.workspace-header
+  .workspace-header__search
+  input.ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.ant-layout-header.workspace-header .workspace-header__search .ant-input-prefix {
+  color: var(--workspace-header-icon-muted);
+}
+
+.ant-layout-header.workspace-header .workspace-header__search .ant-input-prefix .anticon {
+  color: inherit;
+}
+
+.ant-layout-header.workspace-header .workspace-header__search .ant-input-clear-icon {
+  color: var(--workspace-header-icon-muted);
 }
 
 .workspace-content {
@@ -838,7 +957,13 @@ body .ant-image-preview-root .ant-image-preview-wrap {
     display: none;
   }
 
-  .workspace-layout > .workspace-sider.ant-layout-sider {
+  .workspace-layout > .workspace-body.ant-layout {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .workspace-body > .workspace-sider.ant-layout-sider {
     position: relative;
     top: auto;
     flex: none !important;
@@ -848,7 +973,7 @@ body .ant-image-preview-root .ant-image-preview-wrap {
     height: auto;
   }
 
-  .workspace-layout > .ant-layout {
+  .workspace-body > .workspace-main.ant-layout {
     height: auto;
     width: 100% !important;
     min-width: 0;
@@ -882,12 +1007,13 @@ body .ant-image-preview-root .ant-image-preview-wrap {
     padding: 20px 16px;
   }
 
-  .workspace-brand {
-    padding: 0 16px;
+  .workspace-header__brand {
+    max-width: none;
+    width: 100%;
   }
 
-  .workspace-brand.is-collapsed {
-    padding: 0;
+  .workspace-brand {
+    display: none;
   }
 
   .login-page {

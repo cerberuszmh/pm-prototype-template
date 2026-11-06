@@ -12,7 +12,7 @@ export const EXAMPLE_STATUS = [
   { value: "archived", label: "已归档", color: "default" },
 ];
 
-// 示例分类：每条记录单选一个分类，搜索栏按多选筛选 - RB-027
+// 示例分类：每条记录单选一个分类，搜索栏按单选精确筛选 - RB-039
 // 分类无状态语义，不定义 color，列表以纯文本回显
 export const EXAMPLE_CATEGORY = [
   { value: "notice", label: "通知公告" },

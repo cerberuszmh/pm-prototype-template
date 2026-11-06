@@ -16,36 +16,44 @@
 
 ## 2. 工作台滚动参考
 
-桌面端由工作台外壳锁定视口，左侧菜单和右侧内容分别承担滚动：
+桌面端采用 **顶部通栏 + 侧栏 + 主列** 混合布局：通栏 Header 占满顶宽，其下左侧菜单与右侧内容分别滚动。
 
 ```css
 .workspace-layout {
-  height: 100vh;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workspace-layout > .workspace-body.ant-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
   overflow: hidden;
 }
 
 .workspace-sider {
-  height: 100vh;
+  height: 100%;
   overflow: auto;
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-.workspace-sider::-webkit-scrollbar {
-  display: none;
-}
-
-.workspace-layout > .ant-layout {
-  height: 100vh;
+.workspace-body > .workspace-main.ant-layout {
+  flex: 1;
   min-width: 0;
-  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 ```
 
-在 `max-width: 992px` 下，应把工作台与右侧布局恢复为 `height: auto; overflow: visible`，让页面自然滚动。
+在 `max-width: 992px` 下，应把工作台恢复为 `height: auto; overflow: visible`，让页面自然滚动。
 
-顶部区域建议由单一容器整体吸顶：
+主列内标签栏吸顶（通栏 Header 在其上方，不参与 `.workspace-topbar`）：
 
 ```css
 .workspace-topbar {
@@ -56,7 +64,17 @@
 }
 ```
 
-不要分别固定 Header、标签栏和面包屑，否则动态高度变化时容易产生遮挡。
+不要分别固定通栏 Header 与标签栏并手工叠加偏移，否则动态高度变化时容易产生遮挡。
+
+侧栏菜单去掉 Ant Design 内联菜单默认右边框，竖线只保留在 `aside.workspace-sider` 上，与底部折叠按钮对齐：
+
+```css
+.ant-layout-sider.workspace-sider .workspace-sider__menu.ant-menu {
+  width: 100%;
+  border-inline-end: none;
+  border-right: none;
+}
+```
 
 ## 3. 页面间距与列表卡参考
 

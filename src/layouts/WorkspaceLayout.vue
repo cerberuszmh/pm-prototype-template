@@ -7,8 +7,8 @@ import {
   HomeOutlined,
   AppstoreOutlined,
   SettingOutlined,
-  DoubleLeftOutlined,
-  DoubleRightOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   FundProjectionScreenOutlined,
   SearchOutlined,
   DashboardOutlined,
@@ -212,117 +212,106 @@ const handleUserMenuClick = ({ key }) => {
 
 <template>
   <a-layout class="workspace-layout" :class="{ 'is-collapsed': collapsed }">
-    <a-layout-sider
-      :width="248"
-      :collapsed="collapsed"
-      :collapsed-width="48"
-      theme="dark"
-      class="workspace-sider"
-    >
-      <!-- 品牌标题区：占位系统图标 + 系统名称，收起时仅显示图标 -->
-      <div class="workspace-brand" :class="{ 'is-collapsed': collapsed }">
-        <div class="workspace-brand__icon">
+    <!-- 通栏顶栏：品牌与全局操作横跨整页，侧栏在其下方 -->
+    <a-layout-header class="workspace-header">
+      <div class="workspace-header__brand">
+        <div class="workspace-header__brand-icon">
           <SettingOutlined />
         </div>
-        <div class="workspace-brand__title">{{ systemName }}</div>
+        <div class="workspace-header__brand-title">{{ systemName }}</div>
       </div>
 
-      <!-- 主导航：ant-design-vue Inline menu + items 官方写法，见 https://www.antdv.com/components/menu -->
-      <a-menu
-        class="workspace-sider__menu"
-        theme="dark"
-        mode="inline"
-        v-model:open-keys="openKeys"
-        v-model:selected-keys="selectedKeys"
-        :inline-collapsed="collapsed"
-        :items="sideMenuItems"
-        @click="handleMenuClick"
-      />
+      <a-button class="workspace-ai-entry" @click="handleAiAssistant">
+        <span class="workspace-ai-entry__content">
+          <AiSparkleIcon />
+          <span>AI智能助手</span>
+        </span>
+      </a-button>
 
-      <!-- 侧边栏底部收起按钮：与菜单项同高，固定在最下方 -->
-      <div
-        role="button"
-        tabindex="0"
-        class="workspace-sider__collapse"
-        aria-label="收起菜单"
-        @click="collapsed = !collapsed"
-        @keydown.enter="collapsed = !collapsed"
-      >
-        <component :is="collapsed ? DoubleRightOutlined : DoubleLeftOutlined" />
-      </div>
-    </a-layout-sider>
+      <a-tooltip title="大屏页面">
+        <a-button
+          type="text"
+          class="workspace-header__bigscreen"
+          aria-label="大屏页面"
+          @click="handleBigScreen"
+        >
+          <FundProjectionScreenOutlined class="workspace-header__bigscreen-icon" />
+        </a-button>
+      </a-tooltip>
 
-    <a-layout>
-      <!-- 2026-07-22 修订：顶部导航整体吸顶，避免页面滚动时操作入口离开视口 -->
-      <div class="workspace-topbar">
-        <!-- 顶部导航栏 -->
-        <a-layout-header class="workspace-header">
-          <!-- AI 入口位于顶部栏左侧，与右侧用户操作形成稳定分区 -->
-          <a-button class="workspace-ai-entry" @click="handleAiAssistant">
-            <span class="workspace-ai-entry__content">
-              <AiSparkleIcon />
-              <span>AI智能助手</span>
-            </span>
-          </a-button>
-
-          <!-- 大屏入口：紧邻 AI 智能助手右侧，外观与铃铛动作项共用 global.css 统一规则 - RB-036 -->
-          <a-tooltip title="大屏页面">
-            <a-button
-              type="text"
-              class="workspace-header__bigscreen"
-              aria-label="大屏页面"
-              @click="handleBigScreen"
-            >
-              <!-- 图标加专属类放大到 20px，与铃铛图标视觉重量一致 -->
-              <FundProjectionScreenOutlined class="workspace-header__bigscreen-icon" />
-            </a-button>
-          </a-tooltip>
-
-          <a-space :size="10" class="workspace-header__actions">
-            <!-- 全局搜索：动作区最左、先于铃铛，原型阶段仅反馈占位结果 - RB-037 -->
-            <a-input
-              v-model:value="headerSearchValue"
-              class="workspace-header__search"
-              placeholder="搜索页面、功能"
-              aria-label="搜索"
-              allow-clear
-              @press-enter="handleHeaderSearch"
-            >
-              <template #prefix>
-                <SearchOutlined />
-              </template>
-            </a-input>
-            <!-- 通知中心：数字徽标 + 悬停展开三标签页浮层 -->
-            <NotificationPopover />
-            <a-dropdown :trigger="['hover']">
-              <a-space :size="6" class="workspace-user-trigger">
-                <a-avatar :size="26" style="background-color: #1677ff" />
-                <span class="workspace-user-trigger__name">管理员</span>
-                <DownOutlined class="workspace-user-trigger__arrow" />
-              </a-space>
-              <template #overlay>
-                <a-menu :items="userMenuItems" @click="handleUserMenuClick" />
-              </template>
-            </a-dropdown>
+      <a-space :size="10" class="workspace-header__actions">
+        <a-input
+          v-model:value="headerSearchValue"
+          class="workspace-header__search"
+          placeholder="搜索页面、功能"
+          aria-label="搜索"
+          allow-clear
+          @press-enter="handleHeaderSearch"
+        >
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+        <NotificationPopover />
+        <a-dropdown :trigger="['hover']">
+          <a-space :size="6" class="workspace-user-trigger">
+            <a-avatar :size="26" style="background-color: #1677ff" />
+            <span class="workspace-user-trigger__name">管理员</span>
+            <DownOutlined class="workspace-user-trigger__arrow" />
           </a-space>
-        </a-layout-header>
+          <template #overlay>
+            <a-menu :items="userMenuItems" @click="handleUserMenuClick" />
+          </template>
+        </a-dropdown>
+      </a-space>
+    </a-layout-header>
 
-        <!-- 多标签页导航：与 header 组成统一吸顶区域 -->
-        <PageTabs />
-      </div>
+    <a-layout class="workspace-body">
+      <a-layout-sider
+        :width="248"
+        :collapsed="collapsed"
+        :collapsed-width="48"
+        theme="light"
+        class="workspace-sider"
+      >
+        <a-menu
+          class="workspace-sider__menu"
+          theme="light"
+          mode="inline"
+          v-model:open-keys="openKeys"
+          v-model:selected-keys="selectedKeys"
+          :inline-collapsed="collapsed"
+          :items="sideMenuItems"
+          @click="handleMenuClick"
+        />
 
-      <!-- 主内容区：标题/面包屑已上移至 PageTabs，内容区只承载业务视图 -->
-      <a-layout-content class="workspace-content">
-        <!-- :key 拼接 fullPath + reloadKey：路由变化与刷新动作都会触发 remount -->
-        <RouterView :key="`${$route.fullPath}#${reloadKey}`" />
-      </a-layout-content>
+        <div
+          role="button"
+          tabindex="0"
+          class="workspace-sider__collapse"
+          :aria-label="collapsed ? '展开菜单' : '收起菜单'"
+          @click="collapsed = !collapsed"
+          @keydown.enter="collapsed = !collapsed"
+        >
+          <component :is="collapsed ? MenuUnfoldOutlined : MenuFoldOutlined" />
+        </div>
+      </a-layout-sider>
+
+      <a-layout class="workspace-main">
+        <div class="workspace-topbar">
+          <PageTabs />
+        </div>
+
+        <a-layout-content class="workspace-content">
+          <RouterView :key="`${$route.fullPath}#${reloadKey}`" />
+        </a-layout-content>
+      </a-layout>
+
+      <!-- 挤压式 AI 面板占位须与侧栏、主列同级横向排列，不能放在通栏 Header 下方整行 - RB-040 -->
+      <AiAssistantPanel v-if="aiPanelVisible" />
     </a-layout>
-
-    <!-- AI 智能助手面板：作为最右一栏挤压主内容区，不覆盖系统页面；窄屏由组件自身切换为全宽覆盖 -->
-    <AiAssistantPanel v-if="aiPanelVisible" />
   </a-layout>
 
-  <!-- 右下角方形竖排按钮组：AI 智能助手在上、告警信息在下 -->
   <FloatActionGroup />
 </template>
 
@@ -340,7 +329,7 @@ const handleUserMenuClick = ({ key }) => {
   min-height: 0;
 }
 
-/* 底部收起按钮：与菜单项同高 40px，宽度填满，图标居中，hover 时高亮 */
+/* 底部收起按钮：浅色侧栏底栏，与菜单项同高 */
 .workspace-sider__collapse {
   flex-shrink: 0;
   display: flex;
@@ -348,9 +337,9 @@ const handleUserMenuClick = ({ key }) => {
   justify-content: center;
   width: 100%;
   height: 40px;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(0, 0, 0, 0.55);
   border-radius: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid #f0f0f0;
   cursor: pointer;
   outline: none;
   transition: color 0.2s, background-color 0.2s;
@@ -358,12 +347,11 @@ const handleUserMenuClick = ({ key }) => {
 
 .workspace-sider__collapse:hover,
 .workspace-sider__collapse:focus-visible {
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(0, 0, 0, 0.88);
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
-/* 顶部栏、标签栏和面包屑作为右侧列的固定顶部区：不参与内容滚动，
-   由内部 .workspace-content 承担滚动，避免顶部栏计入滚动高度产生幽灵滚动条 */
+/* 顶部栏、标签栏在右侧主列内吸顶；通栏 Header 固定在最上方不参与内容滚动 */
 .workspace-topbar {
   flex-shrink: 0;
   z-index: 100;
@@ -485,14 +473,14 @@ const handleUserMenuClick = ({ key }) => {
    让大屏图标紧邻 AI 按钮，同时右侧动作区保持贴右 */
 :deep(.workspace-header__bigscreen.ant-btn) {
   flex-shrink: 0;
-  margin-right: auto;
 }
 
-/* 顶栏搜索框：紧凑固定宽度，随动作区贴右排列；
-   前缀图标保持输入框默认尺寸，不套用图标动作项的 20px 放大口径 */
-:deep(.workspace-header__search.ant-input-affix-wrapper) {
-  width: 200px;
+/* 右侧动作区贴顶栏右缘；品牌与 AI 在左侧顺序排列 */
+:deep(.workspace-header__actions.ant-space) {
+  margin-left: auto;
 }
+
+/* 顶栏搜索框宽度由 global.css 深色通栏样式统一提供 */
 
 /* 每 30 秒只流动一轮：前 7 秒（7/30 ≈ 23.333%）完成流动，其余时间静止，避免持续动画干扰阅读 */
 /* 背景色首尾使用同一蓝色，终点与起点视觉一致，静止期和下一轮起播都不会跳色 */
