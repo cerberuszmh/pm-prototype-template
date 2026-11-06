@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { HolderOutlined } from "@ant-design/icons-vue";
 import AiAssistantFab from "./AiAssistantFab.vue";
 import AlarmFab from "./AlarmFab.vue";
@@ -18,10 +18,10 @@ const EDGE_MARGIN = 8;
 const DRAG_THRESHOLD = 4;
 
 const containerRef = ref(null);
-// 位置以「距可用区域右边、距视口底边」记录：AI 面板开合时按钮组随可用区域平移，不会钻到面板下方
+// 位置以「距视口右边、距视口底边」记录；AI 面板打开时仅在与面板重叠时才左移
 // 仅保存在组件内存中：布局常驻，切换页面保持位置；刷新页面恢复默认
-// V0.x 修订：默认位置改为可用区域底部水平居中，落在近全屏弹窗底部操作栏中间空白处，不遮挡右下角主操作 - RB-034
-// offsetRight 为 null 表示用户尚未拖动：此时按可用区域实时居中，AI 面板开合或窗口缩放后仍保持居中
+// V0.x 修订：默认位置改为视口底部水平居中 - RB-034
+// offsetRight 为 null 表示用户尚未拖动：此时按视口实时居中，窗口缩放后仍保持居中
 const offsetRight = ref(null);
 const offsetBottom = ref(DEFAULT_BOTTOM);
 const isDragging = ref(false);
@@ -31,6 +31,29 @@ const viewportWidth = ref(window.innerWidth);
 const viewportHeight = ref(window.innerHeight);
 const containerWidth = ref(0);
 const containerHeight = ref(0);
+// 与 AI 面板左缘之间额外保留的空隙（含面板左边框、亚像素与阴影误差）
+const PANEL_VS_BADGE_GAP = 32;
+// 告警徽标在容器盒模型外右上伸出，面板让位须把这段算进「可视右缘」
+const badgeOverflowRight = ref(24);
+// 布局后实测仍被面板遮挡时，在公式结果上再追加的右移量
+const panelAvoidanceBump = ref(0);
+
+function measureBadgeVisualRight(el) {
+  let farthest = el.getBoundingClientRect().right;
+  const selectors = [
+    ".alarm-fab .ant-badge",
+    ".alarm-fab .ant-badge-count",
+    ".ant-float-btn-group .ant-badge",
+    ".ant-float-btn-group .ant-badge-count",
+    ".ant-float-btn-group .ant-scroll-number",
+  ];
+  selectors.forEach((selector) => {
+    el.querySelectorAll(selector).forEach((node) => {
+      farthest = Math.max(farthest, node.getBoundingClientRect().right);
+    });
+  });
+  return farthest;
+}
 
 function measureContainer() {
   const el = containerRef.value;
@@ -39,6 +62,34 @@ function measureContainer() {
   }
   containerWidth.value = el.offsetWidth;
   containerHeight.value = el.offsetHeight;
+  const boxRight = el.getBoundingClientRect().right;
+  const visualRight = measureBadgeVisualRight(el);
+  badgeOverflowRight.value = Math.max(0, Math.ceil(visualRight - boxRight));
+}
+
+// 布局完成后用视口坐标核对；若徽标仍伸入面板则追加 bump（最多迭代 2 次）
+function syncPanelAvoidanceBump(attempt = 0) {
+  const panelW = panelOccupiedWidth.value;
+  if (panelW <= 0) {
+    panelAvoidanceBump.value = 0;
+    return;
+  }
+  nextTick(() => {
+    const el = containerRef.value;
+    if (!el) {
+      return;
+    }
+    const panelLeft = window.innerWidth - panelW;
+    const visualRight = measureBadgeVisualRight(el);
+    const deficit = visualRight + PANEL_VS_BADGE_GAP - panelLeft;
+    if (deficit <= 0) {
+      return;
+    }
+    panelAvoidanceBump.value = Math.ceil(deficit);
+    if (attempt < 2) {
+      syncPanelAvoidanceBump(attempt + 1);
+    }
+  });
 }
 
 function clamp(value, min, max) {
@@ -51,10 +102,9 @@ function clamp(value, min, max) {
   return value;
 }
 
-// 可用区域 = 视口扣除 AI 面板；拖动与渲染共用同一套范围，避免两处口径不一致
+// 拖动与渲染按整页视口收敛；面板是否让位在 containerStyle 中按重叠判断
 function clampRight(value) {
-  const availableWidth = viewportWidth.value - panelOccupiedWidth.value;
-  const maxRight = availableWidth - containerWidth.value - EDGE_MARGIN;
+  const maxRight = viewportWidth.value - containerWidth.value - EDGE_MARGIN;
   return clamp(value, EDGE_MARGIN, maxRight);
 }
 
@@ -66,16 +116,29 @@ function clampBottom(value) {
 // 渲染时再做一次收敛：拖动后若面板打开或窗口变小，按钮组自动回到可视范围内
 const clampedRight = computed(() => {
   if (offsetRight.value === null) {
-    const availableWidth = viewportWidth.value - panelOccupiedWidth.value;
-    const centeredRight = (availableWidth - containerWidth.value) / 2;
+    const centeredRight = (viewportWidth.value - containerWidth.value) / 2;
     return clampRight(centeredRight);
   }
   return clampRight(offsetRight.value);
 });
 const clampedBottom = computed(() => clampBottom(offsetBottom.value));
 
+// 面板打开时：容器右缘 + 徽标伸出量须完全落在面板左缘左侧，否则左移
+const effectiveRight = computed(() => {
+  const base = clampedRight.value;
+  const panelW = panelOccupiedWidth.value;
+  if (panelW <= 0) {
+    return base;
+  }
+  const minRight = panelW + badgeOverflowRight.value + PANEL_VS_BADGE_GAP;
+  if (base >= minRight) {
+    return base + panelAvoidanceBump.value;
+  }
+  return minRight + panelAvoidanceBump.value;
+});
+
 const containerStyle = computed(() => ({
-  right: `${panelOccupiedWidth.value + clampedRight.value}px`,
+  right: `${effectiveRight.value}px`,
   bottom: `${clampedBottom.value}px`,
 }));
 
@@ -136,7 +199,7 @@ function handleHandlePointerDown(event) {
   measureContainer();
   startX = event.clientX;
   startY = event.clientY;
-  startRight = clampedRight.value;
+  startRight = effectiveRight.value;
   startBottom = clampedBottom.value;
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopDrag);
@@ -147,11 +210,25 @@ function handleResize() {
   viewportWidth.value = window.innerWidth;
   viewportHeight.value = window.innerHeight;
   measureContainer();
+  if (panelOccupiedWidth.value > 0) {
+    syncPanelAvoidanceBump(0);
+  }
 }
 
 onMounted(() => {
   measureContainer();
   window.addEventListener("resize", handleResize);
+});
+
+watch(panelOccupiedWidth, (panelW) => {
+  panelAvoidanceBump.value = 0;
+  if (panelW <= 0) {
+    return;
+  }
+  nextTick(() => {
+    measureContainer();
+    syncPanelAvoidanceBump(0);
+  });
 });
 
 // 拖动中途卸载（如退出登录跳转）时必须清理全局监听与 body 样式

@@ -99,11 +99,14 @@ html.login-page-open body #app::-webkit-scrollbar {
   width: 48px;
 }
 
-/* 通栏 Header 置于最上层，不参与下方 body 的横向 flex */
+/* 通栏 Header 置于最上层，不参与下方 body 的横向 flex；宽度随 AI 面板让位，避免右侧动作被 fixed 面板盖住 */
 .workspace-layout > .ant-layout-header.workspace-header {
   position: relative;
   z-index: 2;
   flex-shrink: 0;
+  box-sizing: border-box;
+  width: calc(100% - var(--ai-panel-offset, 0px));
+  max-width: calc(100% - var(--ai-panel-offset, 0px));
 }
 
 /* Header 下方：左侧菜单 + 右侧标签与内容 */
