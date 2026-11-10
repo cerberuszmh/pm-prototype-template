@@ -1,8 +1,8 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { message, Modal } from "ant-design-vue";
-import { EllipsisOutlined, PlusOutlined } from "@ant-design/icons-vue";
+import { Empty, message } from "ant-design-vue";
+import { CheckOutlined } from "@ant-design/icons-vue";
 import { exampleList } from "../../mock/example";
 import { EXAMPLE_STATUS, findEnumLabel } from "../../mock/enums";
 import { workbenchTodos } from "../../mock/workbench";
@@ -15,13 +15,14 @@ import { useWorkbenchShortcuts } from "../../composables/useWorkbenchShortcuts";
 import { useNotificationItemMotion } from "../../composables/useNotificationItemMotion";
 import NotificationCenterFeed from "../../components/NotificationCenterFeed.vue";
 
-// 左侧：指标、待办+通知；右侧窄栏：快捷入口、公告、最近动态；同页一起滚动。
+// 左侧：指标、待办+通知、图表；右侧窄栏：快捷入口、公告、最近动态。
+// 桌面端两栏各自独立滚动，窄屏上下排列并恢复整页自然滚动。
 
 const router = useRouter();
 const {
   allShortcuts,
-  addCustomShortcut,
-  removeCustomShortcut,
+  selectedRouteNames,
+  setShortcutRoutes,
   menuTreeSelectData,
 } = useWorkbenchShortcuts();
 
@@ -30,15 +31,11 @@ const { playMarkAllRead, itemMotionClass } = useNotificationItemMotion();
 const notificationFeedRef = ref(null);
 const announcementFeedRef = ref(null);
 
-const addModalOpen = ref(false);
-const addFormRef = ref(null);
-const addForm = reactive({
-  routeName: undefined,
+// 「管理快捷入口」弹窗：多选下拉统一维护已选与未选，保存时整体生效，取消不改动
+const manageModalOpen = ref(false);
+const manageForm = reactive({
+  routeNames: [],
 });
-
-const addFormRules = {
-  routeName: [{ required: true, message: "请选择跳转页面" }],
-};
 
 function countStatus(status) {
   let count = 0;
@@ -240,64 +237,30 @@ function openShortcut(item) {
   router.push({ name: item.routeName });
 }
 
-function resetAddForm() {
-  addForm.routeName = undefined;
+// 打开时复制一份当前已选值，弹窗内的勾选在保存前不影响卡片
+function openManageModal() {
+  manageForm.routeNames = [...selectedRouteNames.value];
+  manageModalOpen.value = true;
 }
 
-function openAddModal() {
-  resetAddForm();
-  addModalOpen.value = true;
+function closeManageModal() {
+  manageModalOpen.value = false;
 }
 
-function closeAddModal() {
-  addModalOpen.value = false;
+function handleManageModalOpenChange(open) {
+  manageModalOpen.value = open;
 }
 
-function handleAddModalOpenChange(open) {
-  addModalOpen.value = open;
-  if (!open) {
-    resetAddForm();
-  }
+// 下拉节点标题后的对号依据弹窗内的临时选择，而非已保存的卡片数据
+function isRouteChecked(routeName) {
+  return manageForm.routeNames.includes(routeName);
 }
 
-function submitAddShortcut() {
-  if (!addFormRef.value) {
-    return;
-  }
-  addFormRef.value
-    .validate()
-    .then(() => {
-      const result = addCustomShortcut(addForm.routeName);
-      if (result === "duplicate") {
-        message.warning("该菜单已在快捷入口中");
-        return;
-      }
-      if (result !== "ok") {
-        message.warning("请完善必填项后再操作");
-        return;
-      }
-      message.success("已添加快捷入口");
-      closeAddModal();
-    })
-    .catch(() => {
-      message.warning("请完善必填项后再操作");
-    });
-}
-
-function confirmRemoveShortcut(item) {
-  Modal.confirm({
-    title: "删除快捷入口",
-    content: `确定删除「${item.label}」吗？`,
-    okText: "删除",
-    okType: "danger",
-    cancelText: "取消",
-    onOk() {
-      const ok = removeCustomShortcut(item.key);
-      if (ok) {
-        message.success("快捷入口已删除");
-      }
-    },
-  });
+// 允许保存为空，卡片随之展示空状态
+function submitManageShortcuts() {
+  setShortcutRoutes(manageForm.routeNames);
+  message.success("保存成功");
+  closeManageModal();
 }
 </script>
 
@@ -485,19 +448,19 @@ function confirmRemoveShortcut(item) {
             <template #title>
               <span class="workbench-section-card__title">快捷入口</span>
             </template>
+            <!-- 增删统一在「管理」弹窗完成，卡片上不再提供单个删除入口 -->
             <template #extra>
               <a-button
                 type="link"
                 size="small"
                 class="workbench-section-card__extra"
-                @click="openAddModal"
+                @click="openManageModal"
               >
-                <PlusOutlined />
-                添加
+                管理
               </a-button>
             </template>
 
-            <div class="shortcut-list">
+            <div v-if="allShortcuts.length > 0" class="shortcut-list">
               <div
                 v-for="item in allShortcuts"
                 :key="item.key"
@@ -513,29 +476,14 @@ function confirmRemoveShortcut(item) {
                   </span>
                   <span class="shortcut-label">{{ item.label }}</span>
                 </button>
-                <a-dropdown :trigger="['click']">
-                  <button
-                    type="button"
-                    class="shortcut-more"
-                    aria-label="更多操作"
-                    @click.stop
-                  >
-                    <EllipsisOutlined />
-                  </button>
-                  <template #overlay>
-                    <a-menu>
-                      <a-menu-item
-                        key="delete"
-                        danger
-                        @click="confirmRemoveShortcut(item)"
-                      >
-                        删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                </a-dropdown>
               </div>
             </div>
+            <a-empty
+              v-else
+              :image="Empty.PRESENTED_IMAGE_SIMPLE"
+              description="暂无快捷入口"
+              class="shortcut-empty"
+            />
           </a-card>
 
           <a-card class="workbench-section-card">
@@ -622,23 +570,20 @@ function confirmRemoveShortcut(item) {
     </a-row>
 
     <a-modal
-      :open="addModalOpen"
-      title="添加快捷入口"
+      :open="manageModalOpen"
+      title="管理快捷入口"
       wrap-class-name="view-example-modal"
       centered
       :mask-closable="false"
       destroy-on-close
-      @update:open="handleAddModalOpenChange"
+      @update:open="handleManageModalOpenChange"
     >
-      <a-form
-        ref="addFormRef"
-        :model="addForm"
-        :rules="addFormRules"
-        layout="vertical"
-      >
-        <a-form-item label="跳转页面" name="routeName">
+      <a-form :model="manageForm" layout="vertical">
+        <!-- 多选树：已选节点后显示对号，再次点击即取消；分组节点仅用于归类不可选 -->
+        <a-form-item label="快捷入口页面" name="routeNames">
           <a-tree-select
-            v-model:value="addForm.routeName"
+            v-model:value="manageForm.routeNames"
+            multiple
             placeholder="请选择左侧菜单页面"
             allow-clear
             tree-default-expand-all
@@ -651,13 +596,23 @@ function confirmRemoveShortcut(item) {
               overflowX: 'hidden',
             }"
             style="width: 100%"
-          />
+          >
+            <template #title="{ title, value }">
+              <span class="workbench-shortcut-tree-node">
+                <span class="workbench-shortcut-tree-node__label">{{ title }}</span>
+                <CheckOutlined
+                  v-if="value && isRouteChecked(value)"
+                  class="workbench-shortcut-tree-node__check"
+                />
+              </span>
+            </template>
+          </a-tree-select>
         </a-form-item>
       </a-form>
       <template #footer>
         <div class="modal-footer__right">
-          <a-button @click="closeAddModal">取消</a-button>
-          <a-button type="primary" @click="submitAddShortcut">保存</a-button>
+          <a-button @click="closeManageModal">取消</a-button>
+          <a-button type="primary" @click="submitManageShortcuts">保存</a-button>
         </div>
       </template>
     </a-modal>
@@ -686,6 +641,41 @@ function confirmRemoveShortcut(item) {
   flex-direction: column;
   gap: var(--page-section-gap);
   width: 100%;
+}
+
+/* 桌面端两栏独立滚动：断点与工作台单视口布局（global.css max-width: 992px）对齐，
+   窄屏两栏上下排列，交回内容区整页自然滚动，避免嵌套滚动容器 */
+@media (min-width: 993px) {
+  /* 撑满内容区高度，使内容区自身不再出现滚动，滚动交给下方两栏 */
+  .workbench-page {
+    height: 100%;
+  }
+
+  /* 栅格默认可换行，两栏必须并排才能各自占满整列高度 */
+  .workbench-shell {
+    flex-wrap: nowrap;
+    height: 100%;
+  }
+
+  /* contain 防止滚到底后继续带动外层滚动；
+     两栏保留滚动能力但隐藏滚动条，写法与侧边栏一致 - RB-042 */
+  .workbench-main,
+  .workbench-aside {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .workbench-main::-webkit-scrollbar,
+  .workbench-aside::-webkit-scrollbar {
+    display: none;
+  }
+
+  .workbench-aside {
+    align-self: stretch;
+  }
 }
 
 /* 窄栏内标题与 extra 按钮换行时仍可读 */
@@ -878,7 +868,7 @@ function confirmRemoveShortcut(item) {
   gap: 8px;
   min-width: 0;
   min-height: 52px;
-  padding: 8px 28px 8px 10px;
+  padding: 8px 10px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -896,30 +886,9 @@ function confirmRemoveShortcut(item) {
   background: rgba(22, 119, 255, 0.1);
 }
 
-.shortcut-more {
-  position: absolute;
-  top: 4px;
-  right: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-
-.shortcut-item:hover .shortcut-more {
-  color: rgba(0, 0, 0, 0.55);
-}
-
-.shortcut-more:hover {
-  color: #1677ff;
-  background: rgba(0, 0, 0, 0.04);
+/* 全部取消后的空状态，上下留白与列表区高度相近，避免卡片塌成一条 */
+.shortcut-empty {
+  margin: 12px 0;
 }
 
 .shortcut-icon {
@@ -958,5 +927,29 @@ function confirmRemoveShortcut(item) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 标题撑满整行，对号固定在行尾，与普通多选下拉的已选标识位置一致 */
+.workbench-shortcut-tree-dropdown .ant-select-tree-title {
+  display: block;
+}
+
+.workbench-shortcut-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workbench-shortcut-tree-node__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workbench-shortcut-tree-node__check {
+  flex-shrink: 0;
+  color: #1677ff;
 }
 </style>
