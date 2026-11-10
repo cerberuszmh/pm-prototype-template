@@ -163,7 +163,7 @@ function handleAiAssistant() {
   toggleAiPanel();
 }
 
-// V0.x 修订：顶部栏 AI 智能助手右侧新增大屏入口，仅示例无实际页面 - RB-036
+// V0.x 修订：顶部栏右侧动作区（搜索框与铃铛之间）的大屏入口，仅示例无实际页面 - RB-036
 // 原型阶段不创建大屏页面，点击按占位规范只反馈成功结果
 function handleBigScreen() {
   message.success("大屏页面打开成功");
@@ -192,7 +192,7 @@ function handleLogout() {
     cancelText: "取消",
     okType: "danger",
     onOk: () => {
-      message.success("已安全退出登录。");
+      message.success("已安全退出登录");
       router.push("/login");
     },
   });
@@ -228,17 +228,6 @@ const handleUserMenuClick = ({ key }) => {
         </span>
       </a-button>
 
-      <a-tooltip title="大屏页面">
-        <a-button
-          type="text"
-          class="workspace-header__bigscreen"
-          aria-label="大屏页面"
-          @click="handleBigScreen"
-        >
-          <FundProjectionScreenOutlined class="workspace-header__bigscreen-icon" />
-        </a-button>
-      </a-tooltip>
-
       <a-space :size="10" class="workspace-header__actions">
         <a-input
           v-model:value="headerSearchValue"
@@ -252,6 +241,16 @@ const handleUserMenuClick = ({ key }) => {
             <SearchOutlined />
           </template>
         </a-input>
+        <a-tooltip title="大屏页面">
+          <a-button
+            type="text"
+            class="workspace-header__bigscreen"
+            aria-label="大屏页面"
+            @click="handleBigScreen"
+          >
+            <FundProjectionScreenOutlined class="workspace-header__bigscreen-icon" />
+          </a-button>
+        </a-tooltip>
         <NotificationPopover />
         <a-dropdown :trigger="['hover']">
           <a-space :size="6" class="workspace-user-trigger">
@@ -467,10 +466,7 @@ const handleUserMenuClick = ({ key }) => {
   animation: workspaceAiTextGradient 30s linear infinite;
 }
 
-/* 大屏入口只声明布局属性：外观（50px 等高、16px 图标、悬停浅灰底）
-   与铃铛动作项共用 global.css 的 .workspace-header__bell/.workspace-header__bigscreen 统一规则；
-   margin-right: auto 由 AI 按钮转移到本按钮：吸收剩余空间，
-   让大屏图标紧邻 AI 按钮，同时右侧动作区保持贴右 */
+/* 大屏入口外观由 global.css 与铃铛共用；位于右侧动作区内搜索框与铃铛之间 */
 :deep(.workspace-header__bigscreen.ant-btn) {
   flex-shrink: 0;
 }
