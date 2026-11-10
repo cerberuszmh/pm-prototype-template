@@ -4,10 +4,16 @@
 // 布局、首页、登录页与入口统一从这里读取，禁止在组件内分散硬编码
 // ================================================================
 
+import companyLogo from "../assets/company-logo.png";
+
 export const appConfig = {
   // 系统名称：通栏 Header 品牌区、浏览器标签页标题、登录页品牌区共用
   // 必须与项目级 PRD §1 的系统名称保持一致
   systemName: "示例管理系统",
+
+  // 系统 Logo：通栏 Header 品牌区、登录页品牌区、浏览器标签页 favicon 共用
+  // 当前沿用公司 Logo；新项目替换为本项目 Logo 资源即可
+  systemLogo: companyLogo,
 
   // 系统首页标题与副标题：HomeView 的 a-result 展示文案
   homeTitle: "PM 初始化项目模板",

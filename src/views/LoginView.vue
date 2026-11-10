@@ -7,7 +7,6 @@ import { appConfig } from "../config/app";
 import {
   LockOutlined,
   SafetyCertificateOutlined,
-  SettingOutlined,
   SmileOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
@@ -17,6 +16,7 @@ const router = useRouter();
 
 // 品牌文案统一来自品牌配置，新项目只需修改 src/config/app.js
 const systemName = appConfig.systemName;
+const systemLogo = appConfig.systemLogo;
 const companyName = appConfig.companyName;
 // 登录卡副标题与登录成功通知共用同一句欢迎语，避免两处文案漂移
 const loginWelcome = `欢迎进入${systemName}`;
@@ -82,7 +82,7 @@ onUnmounted(() => {
       <div class="template-login__hero-inner">
         <div class="template-login__hero-brand">
           <div class="template-login__hero-icon">
-            <SettingOutlined />
+            <img :src="systemLogo" alt="" />
           </div>
           <div class="template-login__hero-title-row">
             <h1 class="template-login__hero-title">{{ systemName }}</h1>
@@ -437,6 +437,7 @@ onUnmounted(() => {
   }
 }
 
+/* 系统 Logo 为彩色透明底图，与通栏一致直接置于深色背景上，不再叠加主色底块 */
 .template-login__hero-icon {
   display: flex;
   flex-shrink: 0;
@@ -444,10 +445,12 @@ onUnmounted(() => {
   justify-content: center;
   width: 48px;
   height: 48px;
-  font-size: 22px;
-  color: #ffffff;
-  background: var(--login-primary);
-  border-radius: 10px;
+}
+
+.template-login__hero-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .template-login__hero-title {

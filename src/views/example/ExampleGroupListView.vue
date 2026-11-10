@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed } from "vue";
+import { useRoute } from "vue-router";
 import { Empty } from "ant-design-vue";
 import { SearchOutlined } from "@ant-design/icons-vue";
 import FilterBar from "../../components/FilterBar.vue";
@@ -15,6 +16,10 @@ import {
   EXAMPLE_CATEGORY,
   findEnumLabel,
 } from "../../mock/enums";
+
+// 列表卡头标题取路由标题，与菜单、标签页同源，避免各处叫法不一致 - RB-044
+const route = useRoute();
+const listTitle = route.meta.title;
 
 // ──────────────────────────────────────────────────────────────
 // V0.x 修订：左侧分组树筛选右侧列表 - RB-028
@@ -316,7 +321,8 @@ function closeViewModal() {
         </FilterBar>
       </a-card>
 
-      <a-card :body-style="{ padding: '10px' }">
+      <!-- 列表卡新增卡头写明模块名；有卡头时顶部用 11px 抵消 1px 边框重叠 - RB-044 -->
+      <a-card :title="listTitle" :body-style="{ padding: '11px 10px 10px' }">
         <a-table
           :columns="columns"
           :data-source="filteredList"

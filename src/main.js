@@ -13,6 +13,20 @@ import "./styles/global.css";
 // index.html 中只保留通用回退标题，品牌替换只需改 src/config/app.js
 document.title = appConfig.systemName;
 
+// favicon 同样由入口按品牌配置设置，避免 index.html 与配置各存一份 Logo 路径
+function applyFavicon(href) {
+  let link = document.querySelector("link[rel='icon']");
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.type = "image/png";
+  link.href = href;
+}
+
+applyFavicon(appConfig.systemLogo);
+
 dayjs.locale("zh-cn");
 
 createApp(App).use(router).mount("#app");

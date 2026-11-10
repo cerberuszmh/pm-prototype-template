@@ -80,7 +80,7 @@ PM 初始化项目模板/
 
 ## 模板状态说明
 
-- 系统名称、首页文案、登录页公司名等品牌占位统一收敛在 `src/config/app.js`，新项目只改这一个文件即可完成前端主要品牌替换；浏览器标签页标题由 `src/main.js` 按该配置设置。
+- 系统名称、系统 Logo、首页文案、登录页公司名等品牌占位统一收敛在 `src/config/app.js`，新项目只改这一个文件即可完成前端主要品牌替换；浏览器标签页标题与 favicon 由 `src/main.js` 按该配置设置。
 - 路由表（`src/router/index.js`）与侧边栏菜单（`src/layouts/WorkspaceLayout.vue`）只保留**系统首页 + 1 个「示例模块」分组**，作为新增页面时的参照样板。
 - `docs/` 的业务交付目录仅留 `.gitkeep`；`docs/samples/` 保留一套虚构脱敏成品，用于对照 P07、模块 PRD/SRS 与两阶段评审的填写深度。
 - `package.json` 中 `name` 为 `pm-prototype-template`、`version` 为 `0.0.1`，新项目启动时按需替换。

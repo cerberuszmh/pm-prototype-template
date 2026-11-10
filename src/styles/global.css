@@ -141,6 +141,7 @@ html.login-page-open body #app::-webkit-scrollbar {
   overflow: hidden;
 }
 
+/* 品牌 Logo 为彩色透明底图，直接置于深色通栏上，不再叠加半透明底块 */
 .workspace-header__brand-icon {
   display: flex;
   align-items: center;
@@ -148,14 +149,12 @@ html.login-page-open body #app::-webkit-scrollbar {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
-  color: var(--workspace-header-icon-hover);
-  font-size: 16px;
-  background: rgba(255, 255, 255, 0.12);
 }
 
-.workspace-header__brand-icon .anticon {
-  color: inherit;
+.workspace-header__brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .workspace-header__brand-title {

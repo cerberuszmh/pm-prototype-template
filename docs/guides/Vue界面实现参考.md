@@ -76,6 +76,27 @@
 }
 ```
 
+工作台页（`src/views/workbench/WorkbenchView.vue`）在桌面端撑满内容区，左侧主栏与右侧窄栏各自滚动并隐藏滚动条；窄屏不加这段样式，两栏上下排列、整页自然滚动：
+
+```css
+@media (min-width: 993px) {
+  .workbench-page { height: 100%; }
+  .workbench-shell { flex-wrap: nowrap; height: 100%; }
+
+  .workbench-main,
+  .workbench-aside {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain; /* 滚到底不带动外层 */
+    scrollbar-width: none;
+  }
+
+  .workbench-main::-webkit-scrollbar,
+  .workbench-aside::-webkit-scrollbar { display: none; }
+}
+```
+
 ## 3. 页面间距与列表卡参考
 
 全局间距令牌：
@@ -96,16 +117,25 @@
 }
 ```
 
-带 `#extra` 的列表卡仍会渲染 Header。为取得四周 `10px` 的实测间距，可使用：
+列表卡卡头左侧统一写明模块名称（取路由 `meta.title`），操作按钮放在 `#extra`；没有操作按钮的列表卡同样保留卡头。为取得四周 `10px` 的实测间距，可使用：
 
 ```vue
-<a-card :body-style="{ padding: '11px 10px 10px' }">
-  <template #extra>
-    <a-button type="primary">新增</a-button>
-  </template>
-  <!-- 顶部多出的 1px 用于补偿 Header 与 Body 的边框重叠 -->
-  <a-table />
-</a-card>
+<script setup>
+import { useRoute } from "vue-router";
+
+// 与菜单、标签页同源，避免各处叫法不一致
+const listTitle = useRoute().meta.title;
+</script>
+
+<template>
+  <a-card :title="listTitle" :body-style="{ padding: '11px 10px 10px' }">
+    <template #extra>
+      <a-button type="primary">新建</a-button>
+    </template>
+    <!-- 顶部多出的 1px 用于补偿 Header 与 Body 的边框重叠 -->
+    <a-table />
+  </a-card>
+</template>
 ```
 
 ## 4. PageTabs 实现提示
@@ -311,7 +341,7 @@ function handleSubmit() {
 - 背景色 `#001529`，与工作台通栏一致。
 - `::before` 叠加 `48px` 网格线底图（白色 8% 透明度），上下与右缘渐隐遮罩。
 - `::after` 叠加三团蓝色径向色光，22 秒缓慢漂移与明暗呼吸；右缘遮罩，避免染到右栏。
-- 品牌区靠上排列：`48px` 主色图标方块 + 系统名称（`clamp(26px, 3.2vw, 36px)`）+「AI 助力」渐变描边徽标，下方一行说明文案。
+- 品牌区靠上排列：`48px` 系统 Logo（直接展示，无底块）+ 系统名称（`clamp(26px, 3.2vw, 36px)`）+「AI 助力」渐变描边徽标，下方一行说明文案。
 
 **右栏（登录区）**
 
@@ -322,7 +352,8 @@ function handleSubmit() {
 
 **品牌与演示数据**
 
-- 系统名称、单位名称统一读取 `src/config/app.js` 的 `systemName`、`companyName`，禁止在组件内硬编码。
+- 系统名称、系统 Logo、单位名称统一读取 `src/config/app.js` 的 `systemName`、`systemLogo`、`companyName`，禁止在组件内硬编码；当前 `systemLogo` 沿用公司 Logo。
+- 浏览器 favicon 由 `src/main.js` 按 `systemLogo` 设置，与通栏品牌区（`28px`）、登录页品牌区（`48px`）使用同一 Logo 资源。
 - 默认演示账号 `admin`、密码 `123456`；验证码 `A7K9` 仅展示、不参与校验。
 - 登录成功只弹右上角欢迎通知（文案与登录卡副标题同源），不再重复 `message`。
 

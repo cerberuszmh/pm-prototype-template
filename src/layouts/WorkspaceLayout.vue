@@ -6,7 +6,6 @@ import {
   DownOutlined,
   HomeOutlined,
   AppstoreOutlined,
-  SettingOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   FundProjectionScreenOutlined,
@@ -27,8 +26,9 @@ import { NAVIGABLE_ROUTE_NAMES, SIDE_MENU_ROUTE_TREE } from "../config/sideMenu"
 // 计数器自增时，下方 RouterView 的 :key 变化触发组件 remount，等同于浏览器刷新当前 tab
 const { reloadKey } = useOpenedTabs();
 
-// 系统名称统一来自品牌配置，新项目只需修改 src/config/app.js
+// 系统名称与 Logo 统一来自品牌配置，新项目只需修改 src/config/app.js
 const systemName = appConfig.systemName;
+const systemLogo = appConfig.systemLogo;
 
 const route = useRoute();
 const router = useRouter();
@@ -216,7 +216,7 @@ const handleUserMenuClick = ({ key }) => {
     <a-layout-header class="workspace-header">
       <div class="workspace-header__brand">
         <div class="workspace-header__brand-icon">
-          <SettingOutlined />
+          <img :src="systemLogo" alt="" />
         </div>
         <div class="workspace-header__brand-title">{{ systemName }}</div>
       </div>

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed } from "vue";
+import { useRoute } from "vue-router";
 import { message, Modal } from "ant-design-vue";
 import dayjs from "dayjs";
 import {
@@ -20,6 +21,10 @@ import {
   EXAMPLE_CATEGORY,
   findEnumLabel,
 } from "../../mock/enums";
+
+// 列表卡头标题取路由标题，与菜单、标签页同源，避免各处叫法不一致 - RB-044
+const route = useRoute();
+const listTitle = route.meta.title;
 
 // ──────────────────────────────────────────────────────────────
 // FIX-003 修订：示例记录新增所属分组，列表与查看弹窗显示完整路径
@@ -681,7 +686,7 @@ function handleSubmit() {
     </a-card>
 
     <!-- 2026-07-22 修订：顶部用 11px 抵消 Header 与 Body 的 1px 边框重叠，确保视觉间距为 10px -->
-    <a-card :body-style="{ padding: '11px 10px 10px' }">
+    <a-card :title="listTitle" :body-style="{ padding: '11px 10px 10px' }">
       <template #extra>
         <a-space :size="8">
           <!-- 批量按钮无选中项时禁用；主按钮发布，下拉菜单提供归档 -->
